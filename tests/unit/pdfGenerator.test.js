@@ -60,6 +60,18 @@ describe('pdfGenerator', () => {
   });
 
   describe('addTextLayerToPDF', () => {
+    beforeEach(() => {
+      // fetchのモック（日本語フォント）
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1000)),
+      });
+    });
+
+    afterEach(() => {
+      delete global.fetch;
+    });
+
     test('PDFにテキストレイヤーを追加する', async () => {
       const mockPage = {
         getWidth: jest.fn().mockReturnValue(612),
@@ -68,6 +80,7 @@ describe('pdfGenerator', () => {
       };
 
       const mockPdfDoc = {
+        registerFontkit: jest.fn(),
         getPage: jest.fn().mockReturnValue(mockPage),
         embedFont: jest.fn().mockResolvedValue('mockFont'),
         save: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
@@ -96,7 +109,9 @@ describe('pdfGenerator', () => {
       const result = await addTextLayerToPDF(arrayBuffer, textLayers);
 
       expect(PDFDocument.load).toHaveBeenCalledWith(arrayBuffer);
-      expect(mockPdfDoc.embedFont).toHaveBeenCalledWith(StandardFonts.Helvetica);
+      expect(mockPdfDoc.registerFontkit).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalled();
+      expect(mockPdfDoc.embedFont).toHaveBeenCalled();
       expect(mockPdfDoc.getPage).toHaveBeenCalledWith(0); // pageNumber 1 -> index 0
       expect(mockPage.drawText).toHaveBeenCalledWith('Test ASCII', {
         x: 10,
@@ -120,6 +135,7 @@ describe('pdfGenerator', () => {
       };
 
       const mockPdfDoc = {
+        registerFontkit: jest.fn(),
         getPage: jest.fn()
           .mockReturnValueOnce(mockPage1)
           .mockReturnValueOnce(mockPage2),
