@@ -1,0 +1,9 @@
+numpy==1.24.3
+opencv-python==4.8.1.78
+pypdf==3.17.4
+pypdfium2==4.26.0
+reportlab==4.0.7
+onnxocr==2025.5
+Flask==3.0.0
+Flask-CORS==4.0.0
+Pillow==10.1.0

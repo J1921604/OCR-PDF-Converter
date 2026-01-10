@@ -1,4 +1,4 @@
-﻿{
+{
   "chat.promptFilesRecommendations": {
     "speckit.constitution": true,
     "speckit.specify": true,
@@ -20,5 +20,6 @@
     { "text": "正常に動作するまで繰り返し検証しエラー修正を完了する" },
     { "text": "フローチャート等の Mermaid 図を挿入し構文エラーを修正する" },
     { "file": ".github/copilot-commit-message-instructions.md" }
-  ]
+  ],
+  "python-envs.pythonProjects": []
 }

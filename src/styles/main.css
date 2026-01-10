@@ -80,6 +80,12 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+.upload-area.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .upload-area p {
   margin: 10px 0;
   color: #c7c7c7;

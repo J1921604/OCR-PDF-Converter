@@ -1,11 +1,10 @@
 // App.jsx - メインアプリケーションコンポーネント
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileUploader } from './components/FileUploader';
 import { OCRProgress } from './components/OCRProgress';
 import { DownloadButton } from './components/DownloadButton';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useOCR } from './hooks/useOCR';
-import { addTextLayerToPDF } from './services/pdfGenerator';
 import { getUserFriendlyErrorMessage } from './utils/errorHandler';
 import './styles/main.css';
 
@@ -26,10 +25,23 @@ export function App() {
     textLayers,
     error: ocrError,
     processPages,
+    cancelProcessing,
   } = useOCR();
 
   const [searchablePDF, setSearchablePDF] = useState(null);
   const [globalError, setGlobalError] = useState(null);
+
+  // ファイルが変更された場合、OCR処理をリセット
+  useEffect(() => {
+    if (file) {
+      console.log('[App] 新しいファイルが選択されました。前回の処理をリセット');
+      setSearchablePDF(null);
+      setGlobalError(null);
+      if (isProcessing) {
+        cancelProcessing();
+      }
+    }
+  }, [file, cancelProcessing]);
 
   const handleOCRStart = async () => {
     if (!file) return;
@@ -39,16 +51,15 @@ export function App() {
     setSearchablePDF(null);
 
     try {
-      // OCR処理実行
+      // Pythonバックエンドで処理（PDFBlobを直接受け取る）
       console.log('[App] processPages 開始');
-      const { textLayers: layers } = await processPages(file);
-      console.log('[App] processPages 完了, layers:', layers.length);
+      const result = await processPages(file);
+      console.log('[App] processPages 完了');
 
-      // 検索可能PDF生成
-      console.log('[App] PDF生成開始');
-      const pdfBlob = await addTextLayerToPDF(file, layers);
-      console.log('[App] PDF生成完了, size:', pdfBlob.size);
-      setSearchablePDF(pdfBlob);
+      if (result && result.pdfBlob) {
+        console.log('[App] PDF取得完了, size:', result.pdfBlob.size);
+        setSearchablePDF(result.pdfBlob);
+      }
     } catch (error) {
       console.error('[App] OCR処理エラー:', error);
       setGlobalError(error);
@@ -56,6 +67,10 @@ export function App() {
   };
 
   const handleReset = () => {
+    console.log('[App] リセット実行');
+    if (isProcessing) {
+      cancelProcessing();
+    }
     clearFile();
     setSearchablePDF(null);
     setGlobalError(null);
@@ -67,7 +82,7 @@ export function App() {
     <div className="app-container">
       <header className="app-header">
         <h1>OCR検索可能PDF変換</h1>
-        <p>スキャンしたPDFや画像をOCR処理して、検索可能なPDFに変換します</p>
+        <p>スキャンしたPDFをOCR処理して、検索可能なPDFに変換します（OnnxOCR + Python）</p>
       </header>
 
       <main className="app-main">
@@ -76,6 +91,7 @@ export function App() {
           fileInfo={fileInfo}
           error={uploadError}
           isLoading={isUploading}
+          disabled={isProcessing}
         />
 
         {file && !isProcessing && !searchablePDF && (
@@ -124,7 +140,7 @@ export function App() {
       </main>
 
       <footer className="app-footer">
-        <p>完全クライアントサイド処理（ファイルはサーバーに送信されません）</p>
+        <p>Pythonバックエンド（OnnxOCR）で高精度OCR処理</p>
         <p>
           <a href="https://github.com/J1921604/OCR-PDF-Converter" target="_blank" rel="noopener noreferrer">
             GitHub

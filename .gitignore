@@ -1,0 +1,54 @@
+# 依存関係
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ビルド成果物
+dist/
+build/
+*.egg-info/
+
+# 環境設定
+.env
+.env.local
+.venv/
+venv/
+ENV/
+
+# IDEファイル
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ログファイル
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS固有
+.DS_Store
+Thumbs.db
+
+# テスト
+coverage/
+.nyc_output/
+*.test.js.snap
+
+# 一時ファイル
+*.tmp
+*.temp
+input_*.pdf
+output_*.pdf
+
+# キャッシュ
+.cache/
+.parcel-cache/
+
+# Webpack
+.webpack/

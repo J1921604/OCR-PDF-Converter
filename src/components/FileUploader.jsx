@@ -2,7 +2,7 @@
 import React, { useRef } from 'react';
 import { getUserFriendlyErrorMessage } from '../utils/errorHandler';
 
-export function FileUploader({ onFileSelect, fileInfo, error, isLoading }) {
+export function FileUploader({ onFileSelect, fileInfo, error, isLoading, disabled }) {
   const fileInputRef = useRef(null);
 
   const handleFileChange = (event) => {
@@ -21,6 +21,8 @@ export function FileUploader({ onFileSelect, fileInfo, error, isLoading }) {
     event.preventDefault();
     event.stopPropagation();
 
+    if (disabled) return;
+
     const droppedFile = event.dataTransfer.files[0];
     if (droppedFile) {
       onFileSelect(droppedFile);
@@ -28,19 +30,21 @@ export function FileUploader({ onFileSelect, fileInfo, error, isLoading }) {
   };
 
   const handleClick = () => {
+    if (disabled) return;
     fileInputRef.current?.click();
   };
 
   return (
     <div className="file-uploader">
       <div
-        className="upload-area"
+        className={`upload-area ${disabled ? 'disabled' : ''}`}
         onClick={handleClick}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         role="button"
-        tabIndex={0}
+        tabIndex={disabled ? -1 : 0}
         aria-label="PDFファイルまたは画像をアップロード"
+        aria-disabled={disabled}
       >
         <input
           ref={fileInputRef}
@@ -48,13 +52,14 @@ export function FileUploader({ onFileSelect, fileInfo, error, isLoading }) {
           accept=".pdf,image/jpeg,image/png,image/tiff"
           onChange={handleFileChange}
           style={{ display: 'none' }}
+          disabled={disabled}
         />
         <p>PDFまたは画像をドラッグ＆ドロップ</p>
         <p>または</p>
-        <button type="button" disabled={isLoading}>
+        <button type="button" disabled={isLoading || disabled}>
           {isLoading ? 'ファイル処理中...' : 'ファイルを選択'}
         </button>
-        <p className="file-info-text">対応形式: PDF, JPEG, PNG, TIFF（10MB以下）</p>
+        <p className="file-info-text">対応形式: PDF, JPEG, PNG, TIFF（50MB以下）</p>
       </div>
 
       {fileInfo && (
