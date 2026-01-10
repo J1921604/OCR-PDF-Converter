@@ -7,7 +7,7 @@ export function OCRProgress({ isProcessing, progress, pageInfo }) {
   }
 
   return (
-    <div className="ocr-progress">
+    <div className="ocr-progress" data-testid="ocr-progress">
       <h3>OCR処理中...</h3>
       <div
         className="progress-bar-container"

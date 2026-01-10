@@ -35,7 +35,7 @@ export function FileUploader({ onFileSelect, fileInfo, error, isLoading, disable
   };
 
   return (
-    <div className="file-uploader">
+    <div className="file-uploader" data-testid="file-uploader">
       <div
         className={`upload-area ${disabled ? 'disabled' : ''}`}
         onClick={handleClick}
@@ -45,6 +45,7 @@ export function FileUploader({ onFileSelect, fileInfo, error, isLoading, disable
         tabIndex={disabled ? -1 : 0}
         aria-label="PDFファイルまたは画像をアップロード"
         aria-disabled={disabled}
+        data-testid="drop-zone"
       >
         <input
           ref={fileInputRef}
