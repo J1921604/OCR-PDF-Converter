@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; 
-                   script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com; 
-                   worker-src 'self' blob: https://cdnjs.cloudflare.com; 
-                   style-src 'self' 'unsafe-inline'; 
-                   img-src 'self' data: blob:;
-                   connect-src 'self' ws://localhost:3000 wss://localhost:3000 ws://localhost:3000/ws wss://localhost:3000/ws http://localhost:3000 https://localhost:3000 https://cdnjs.cloudflare.com;">
+    <% if (htmlWebpackPlugin.options.csp) { %>
+    <meta http-equiv="Content-Security-Policy" content="<%= htmlWebpackPlugin.options.csp %>">
+    <% } %>
     <meta name="description" content="スキャンPDFをOCR処理して検索可能PDFに変換するWebアプリケーション">
     <title>OCR検索可能PDF変換</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">

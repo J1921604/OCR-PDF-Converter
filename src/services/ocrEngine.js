@@ -9,9 +9,13 @@ import { createWorker } from 'tesseract.js';
 export async function initializeWorker(lang = 'jpn') {
   try {
     const worker = await createWorker(lang, 1, {
+      // worker/coreはビルド成果物へ同梱して配信（webpack.config.js の CopyWebpackPlugin で配置）
       workerPath: '/assets/wasm/worker.min.js',
-      langPath: '/assets/wasm',
-      corePath: '/assets/wasm',
+      // 言語データは公式配布先を利用（jpn.traineddata の巨大ファイルをリポジトリに同梱しない方針）
+      // 例: https://tessdata.projectnaptha.com/4.0.0/jpn.traineddata.gz
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      // corePathは *.wasm.js を明示
+      corePath: '/assets/wasm/tesseract-core.wasm.js',
     });
     
     return worker;

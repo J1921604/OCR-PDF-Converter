@@ -55,5 +55,35 @@ Write-Host ""
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Gray
 Write-Host ""
 
+# Open browser after the dev server is ready (without using webpack --open)
+$targetUrl = 'http://localhost:3000/'
+
+# Start a background job that waits for port 3000 to open, then opens the browser.
+# This keeps the main terminal attached to `npm start` logs.
+try {
+    Start-Job -ArgumentList $targetUrl -ScriptBlock {
+        param($url)
+
+        $maxSeconds = 60
+        for ($i = 0; $i -lt $maxSeconds; $i++) {
+            try {
+                if (Test-NetConnection -ComputerName 'localhost' -Port 3000 -InformationLevel Quiet) {
+                    Start-Process $url
+                    return
+                }
+            } catch {
+                # ignore and retry
+            }
+            Start-Sleep -Seconds 1
+        }
+
+        # Fallback: open anyway after timeout
+        Start-Process $url
+    } | Out-Null
+} catch {
+    # If Start-Job is unavailable/restricted, fall back to immediate open.
+    Start-Process $targetUrl
+}
+
 # Run npm start
 npm start
