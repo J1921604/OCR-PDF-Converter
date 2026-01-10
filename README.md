@@ -2,16 +2,19 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-success)](https://j1921604.github.io/OCR-PDF-Converter/)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/J1921604/OCR-PDF-Converter/releases)
 
-**スキャンしたPDFファイルをOCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
+**スキャンしたPDFや画像ファイルをOCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
 
 ## 特徴
 
-✅ **完全クライアントサイド処理** - アップロードしたPDFはサーバーに送信されません  
+✅ **完全クライアントサイド処理** - アップロードしたファイルはサーバーに送信されません  
 ✅ **プライバシー保護** - 全ての処理がブラウザ内で完結  
 ✅ **GitHub Pages対応** - 静的ホスティングで無料公開可能  
 ✅ **日本語OCR対応** - Tesseract.jsによる高精度日本語認識  
 ✅ **複数ページ対応** - バッチ処理でリアルタイム進捗表示  
+✅ **画像ファイル対応** - JPEG、PNG、TIFFファイルも処理可能  
+✅ **多様なサイズ対応** - A3、A4、Letter、Legal等、様々なページサイズに対応  
 ✅ **クロスブラウザ** - Chrome, Firefox, Edge, Safari対応
 
 ```mermaid
@@ -70,8 +73,9 @@ npm start
 
 ## 使い方
 
-1. **PDFファイルを選択**  
-   「PDFを選択」ボタンをクリックし、スキャンしたPDFファイル（10MB以下）を選択します。
+1. **ファイルを選択**  
+   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイルまたは画像ファイル（10MB以下）を選択します。  
+   **対応形式**: PDF、JPEG、PNG、TIFF
 
 2. **OCR変換開始**  
    「OCR変換開始」ボタンをクリックすると、OCR処理が開始されます。  
