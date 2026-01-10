@@ -19,7 +19,7 @@ export function useFileUpload() {
       // ファイル検証
       console.log('[useFileUpload] ファイル検証開始');
       const validation = validateFile(selectedFile);
-      if (!validation.valid) {
+      if (!validation.isValid) {
         console.error('[useFileUpload] 検証失敗:', validation.errors);
         throw new ValidationError('ファイル検証失敗', validation.errors);
       }
