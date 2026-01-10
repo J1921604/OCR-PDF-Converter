@@ -39,11 +39,9 @@ export function handleOCRError(error, pageNumber) {
   let message = error.message || 'OCR処理に失敗しました';
   
   if (error.message && error.message.includes('timeout')) {
-    message = `ページ${pageNumber}のOCR処理がタイムアウトしました`;
+    message = 'OCR処理がタイムアウトしました';
   } else if (error.message && error.message.includes('out of memory')) {
     message = 'メモリ不足: ファイルサイズを小さくしてください';
-  } else if (pageNumber !== undefined) {
-    message = `ページ${pageNumber}のOCR処理に失敗しました`;
   }
   
   return new OCRError(message, pageNumber, error);
@@ -60,7 +58,7 @@ export function getUserFriendlyErrorMessage(error) {
   }
   
   if (error instanceof OCRError) {
-    const prefix = error.pageNumber !== undefined ? `ページ${error.pageNumber}: ` : '';
+    const prefix = typeof error.pageNumber === 'number' ? `ページ${error.pageNumber}: ` : '';
     return prefix + error.message;
   }
   

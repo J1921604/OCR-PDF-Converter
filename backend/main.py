@@ -41,6 +41,8 @@ def render_pdf_to_image(pdf_path, page_number, dpi=300):
     Returns:
         PIL Image, width, height
     """
+    pdf = None
+    page = None
     try:
         pdf = pdfium.PdfDocument(pdf_path)
         page = pdf[page_number]
@@ -50,6 +52,18 @@ def render_pdf_to_image(pdf_path, page_number, dpi=300):
         return pil_img, width, height
     except Exception as e:
         raise Exception(f"PDF画像レンダリング失敗 (ページ {page_number + 1}): {str(e)}")
+    finally:
+        # Windowsではファイルハンドルが残ると入力PDFの削除が失敗するため、明示的にクローズする
+        try:
+            if page is not None and hasattr(page, 'close'):
+                page.close()
+        except Exception:
+            pass
+        try:
+            if pdf is not None and hasattr(pdf, 'close'):
+                pdf.close()
+        except Exception:
+            pass
 
 
 def run_ocr(pil_img):
@@ -66,6 +80,24 @@ def run_ocr(pil_img):
         # PIL ImageをOpenCV形式に変換
         rgb = np.array(pil_img)
         bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+
+        # ---- OCR前処理（精度・安定性向上） ----
+        # 目的: ノイズ低減/コントラスト強調により、文字の検出漏れや誤認識を抑える
+        try:
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+            gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+            thr = cv2.adaptiveThreshold(
+                gray,
+                255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY,
+                31,
+                10,
+            )
+            bgr = cv2.cvtColor(thr, cv2.COLOR_GRAY2BGR)
+        except Exception as e:
+            # 前処理が失敗してもOCR自体は続行
+            print(f"[WARN] 前処理スキップ: {e}")
         
         # OCR実行
         ocr = get_ocr_engine()
@@ -122,34 +154,42 @@ def normalize_ocr_results(ocr_results, confidence_threshold=0.5):
     return items
 
 
-def create_overlay_pdf(page_w, page_h, ocr_items):
+def create_overlay_pdf(page_w_pt, page_h_pt, ocr_items, scale_x=1.0, scale_y=1.0):
     """
     ReportLabで「透明テキストレイヤーPDF」を作る
     
     Args:
-        page_w: ページ幅
-        page_h: ページ高さ
+        page_w_pt: ページ幅（PDFポイント）
+        page_h_pt: ページ高さ（PDFポイント）
         ocr_items: 正規化されたOCRアイテムのリスト
+        scale_x: 画像px→PDFptのXスケール
+        scale_y: 画像px→PDFptのYスケール
         
     Returns:
         PDFのバイトデータ
     """
     try:
         buf = io.BytesIO()
-        c = canvas.Canvas(buf, pagesize=(page_w, page_h))
+        c = canvas.Canvas(buf, pagesize=(page_w_pt, page_h_pt))
         c.setFillAlpha(0.0)  # 完全透明
         
         for item in ocr_items:
             x1, y1, x2, y2 = item["bbox"]
             text = item["text"]
+
+            # OCR結果(画像px)をPDFポイント座標へ変換
+            x1_pt = x1 * scale_x
+            y1_pt = y1 * scale_y
+            x2_pt = x2 * scale_x
+            y2_pt = y2 * scale_y
             
             # フォントサイズを矩形の高さに合わせる
-            fontsize = max(6, (y2 - y1) * 0.9)
+            fontsize = max(6, (y2_pt - y1_pt) * 0.9)
             c.setFont("HeiseiKakuGo-W5", fontsize)
             
             # PDF座標は左下原点なので上下を反転
-            baseline_y = page_h - y2
-            c.drawString(x1, baseline_y, text)
+            baseline_y = page_h_pt - y2_pt
+            c.drawString(x1_pt, baseline_y, text)
         
         c.save()
         return buf.getvalue()
@@ -167,7 +207,9 @@ def merge_overlay(original_pdf_path, overlay_bytes_list, output_pdf_path):
         output_pdf_path: 出力PDFファイルパス
     """
     try:
-        reader = PdfReader(original_pdf_path)
+        # Windowsでのファイルロック回避のため、BytesIOで読み込む
+        with open(original_pdf_path, 'rb') as f:
+            reader = PdfReader(io.BytesIO(f.read()))
         writer = PdfWriter()
         
         for page_num, overlay_bytes in enumerate(overlay_bytes_list):
@@ -199,11 +241,17 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
         confidence_threshold: OCR信頼度の閾値
         progress_callback: 進捗コールバック関数 callback(current, total, message)
     """
+    pdf = None
     try:
         # PDFページ数を取得
         pdf = pdfium.PdfDocument(input_pdf_path)
         page_count = len(pdf)
         print(f"[開始] PDFファイル: {input_pdf_path}, ページ数: {page_count}")
+
+        # PDFページサイズ（pt）を取得（A4以外も含めて正確に扱う）
+        # ここでファイルパスを渡すと Windows でハンドルが残りやすいため、BytesIO 経由にする
+        with open(input_pdf_path, 'rb') as f:
+            reader_for_size = PdfReader(io.BytesIO(f.read()))
         
         overlay_list = []
         
@@ -217,6 +265,15 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
                 # 1. PDFページを画像として取り出す
                 pil_img, img_width, img_height = render_pdf_to_image(input_pdf_path, page_num, dpi)
                 print(f"  → 画像レンダリング完了: {img_width}x{img_height}px")
+
+                # PDFのページサイズ（ポイント）
+                pdf_page = reader_for_size.pages[page_num]
+                page_w_pt = float(pdf_page.mediabox.width)
+                page_h_pt = float(pdf_page.mediabox.height)
+
+                # 画像px → PDFpt 変換係数
+                scale_x = page_w_pt / float(img_width)
+                scale_y = page_h_pt / float(img_height)
                 
                 # 2. OCRの実行
                 ocr_results = run_ocr(pil_img)
@@ -228,7 +285,7 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
                 
                 # 4. 透明テキストレイヤーPDFを作成
                 if ocr_items:
-                    overlay_bytes = create_overlay_pdf(img_width, img_height, ocr_items)
+                    overlay_bytes = create_overlay_pdf(page_w_pt, page_h_pt, ocr_items, scale_x=scale_x, scale_y=scale_y)
                     print(f"  → オーバーレイPDF作成完了")
                 else:
                     overlay_bytes = None
@@ -263,6 +320,12 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
             "success": False,
             "error": error_msg,
         }
+    finally:
+        try:
+            if pdf is not None and hasattr(pdf, 'close'):
+                pdf.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

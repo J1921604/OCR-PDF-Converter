@@ -1,197 +1,171 @@
-# OCR Searchable PDF Converter - Launch Script
-# Start Python Backend + React Frontend
+<#
+start-full.ps1
+
+要件:
+- Python 3.10.11 を標準実行環境 (py -3.10)
+- 仮想環境 .venv を作成/使用し requirements.txt をインストール
+- フロント(http://localhost:8080/) を自動起動
+- 白画面(未描画)の原因になりやすい Start-Job 監視ループは使わず、安定して起動・停止できる構成
+#>
+
+[CmdletBinding()]
+param(
+    # 0の場合は従来通りENTER待ち。0より大きい場合は指定秒数後に自動停止する（CI/自動検証用）。
+    [int]$AutoExitSeconds = 0,
+    # CIなどでブラウザ自動起動を抑止したい場合に使用。
+    [switch]$NoBrowser
+)
+
+$ErrorActionPreference = 'Stop'
+
+# Windows PowerShell での日本語ログ文字化けを抑制
+try { chcp 65001 | Out-Null } catch {}
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
+$env:PYTHONUTF8 = '1'
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "OCR PDF Converter - Starting Servers" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Check Python 3.10.11
-Write-Host "`nChecking Python 3.10.11..." -ForegroundColor Yellow
-
-try {
-    $pythonVersion = & py -3.10 --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] $pythonVersion" -ForegroundColor Green
-    } else {
-        Write-Host "[NG] Python 3.10.11 not found" -ForegroundColor Red
-        exit 1
-    }
-} catch {
-    Write-Host "[NG] Python 3.10.11 not found" -ForegroundColor Red
+function Fail($message) {
+    Write-Host "[NG] $message" -ForegroundColor Red
     exit 1
 }
 
-# Check Node.js
+function Ok($message) {
+    Write-Host "[OK] $message" -ForegroundColor Green
+}
+
+Write-Host "`nChecking Python 3.10 (py -3.10)..." -ForegroundColor Yellow
+try {
+    $pythonVersion = & py -3.10 --version 2>&1
+    if ($LASTEXITCODE -ne 0) { Fail "Python 3.10.11 not found (py -3.10 failed)" }
+    Ok $pythonVersion
+} catch {
+    Fail "Python 3.10.11 not found (py launcher missing)"
+}
+
 Write-Host "Checking Node.js..." -ForegroundColor Yellow
 try {
     $nodeVersion = & node --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] $nodeVersion" -ForegroundColor Green
-    } else {
-        Write-Host "[NG] Node.js not found" -ForegroundColor Red
-        exit 1
-    }
+    if ($LASTEXITCODE -ne 0) { Fail "Node.js not found" }
+    Ok $nodeVersion
 } catch {
-    Write-Host "[NG] Node.js not found" -ForegroundColor Red
-    exit 1
+    Fail "Node.js not found"
 }
 
-# Setup Python venv
-Write-Host "`nSetting up Python virtual environment..." -ForegroundColor Yellow
-$venvPath = Join-Path $PSScriptRoot ".venv"
+$venvPath = Join-Path $PSScriptRoot '.venv'
+$venvPython = Join-Path $venvPath 'Scripts\python.exe'
 
-if (-not (Test-Path $venvPath)) {
+Write-Host "`nSetting up Python virtual environment (.venv)..." -ForegroundColor Yellow
+if (-not (Test-Path $venvPython)) {
     Write-Host "Creating virtual environment..." -ForegroundColor Yellow
     & py -3.10 -m venv $venvPath
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[NG] Failed to create venv" -ForegroundColor Red
-        exit 1
-    }
+    if ($LASTEXITCODE -ne 0) { Fail "Failed to create .venv" }
 }
 
-# Activate venv
-$activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
-if (Test-Path $activateScript) {
-    & $activateScript
-    Write-Host "[OK] Virtual environment activated" -ForegroundColor Green
-} else {
-    Write-Host "[NG] Activate script not found" -ForegroundColor Red
-    exit 1
+try {
+    $venvVersion = & $venvPython --version 2>&1
+    Ok ".venv python: $venvVersion"
+} catch {
+    Fail "Failed to run .venv python"
 }
 
-# Install npm packages
+Write-Host "`nInstalling Python packages (requirements.txt) into .venv..." -ForegroundColor Yellow
+$requirementsPath = Join-Path $PSScriptRoot 'requirements.txt'
+if (-not (Test-Path $requirementsPath)) { Fail "requirements.txt not found" }
+
+& $venvPython -m pip install --upgrade pip --quiet
+& $venvPython -m pip install -r $requirementsPath --quiet
+if ($LASTEXITCODE -ne 0) { Fail "pip install -r requirements.txt failed" }
+Ok "Python packages installed"
+
 Write-Host "`nInstalling npm packages..." -ForegroundColor Yellow
 & npm install --silent
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[NG] npm install failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[OK] npm packages installed" -ForegroundColor Green
-
-# Install Python packages
-Write-Host "`nInstalling Python packages..." -ForegroundColor Yellow
-$requirementsPath = Join-Path $PSScriptRoot "requirements.txt"
-& python -m pip install --upgrade pip --quiet
-& python -m pip install -r $requirementsPath --quiet
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[NG] Python packages install failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[OK] Python packages installed" -ForegroundColor Green
+if ($LASTEXITCODE -ne 0) { Fail "npm install failed" }
+Ok "npm packages installed"
 
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "Starting servers..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-Write-Host "`n[Backend] http://localhost:5000" -ForegroundColor Green
-Write-Host "[Frontend] http://localhost:8080" -ForegroundColor Green
-Write-Host "`nPress Ctrl+C to stop servers`n" -ForegroundColor Yellow
+$backendUrl = 'http://localhost:5000'
+$frontendUrl = 'http://localhost:8080/'
 
-# Start as background jobs
-$backendJob = Start-Job -ScriptBlock {
-    param($scriptRoot, $venvPath)
-    Set-Location $scriptRoot
-    & "$venvPath\Scripts\python.exe" "backend\app.py"
-} -ArgumentList $PSScriptRoot, $venvPath
+Write-Host "`n[Backend]  $backendUrl" -ForegroundColor Green
+Write-Host "[Frontend] $frontendUrl" -ForegroundColor Green
 
-$frontendJob = Start-Job -ScriptBlock {
-    param($scriptRoot)
-    Set-Location $scriptRoot
-    & npm start
-} -ArgumentList $PSScriptRoot
+# 起動: 直接プロセスを起動（Start-Jobは使わない）
+$backendScript = Join-Path $PSScriptRoot 'backend\app.py'
+if (-not (Test-Path $backendScript)) { Fail "backend/app.py not found" }
 
-# Monitor output (non-blocking)
-Write-Host "`nServers are starting... (Press Ctrl+C to stop)`n" -ForegroundColor Yellow
+Write-Host "`nLaunching backend..." -ForegroundColor Yellow
+$backendProc = Start-Process -FilePath $venvPython -ArgumentList @($backendScript) -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru
+Ok "Backend PID: $($backendProc.Id)"
 
-$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-$maxWaitSeconds = 60
+Write-Host "Launching frontend (webpack dev server)..." -ForegroundColor Yellow
+$npmCmd = Join-Path $PSScriptRoot 'node_modules\.bin\npm.cmd'
+if (-not (Test-Path $npmCmd)) {
+    # fallback: global npm
+    $npmCmd = 'npm.cmd'
+}
 
-while ($stopwatch.Elapsed.TotalSeconds -lt $maxWaitSeconds) {
-    # Get any output from jobs
-    $backendOutput = Receive-Job -Job $backendJob -ErrorAction SilentlyContinue
-    if ($backendOutput) {
-        $backendOutput | ForEach-Object {
-            Write-Host "[Backend] $_" -ForegroundColor Cyan
-        }
-    }
-    
-    $frontendOutput = Receive-Job -Job $frontendJob -ErrorAction SilentlyContinue
-    if ($frontendOutput) {
-        $frontendOutput | ForEach-Object {
-            Write-Host "[Frontend] $_" -ForegroundColor Yellow
-        }
-    }
-    
-    # Check if both servers are ready
-    $backendReady = $false
-    $frontendReady = $false
-    
+$frontendProc = Start-Process -FilePath $npmCmd -ArgumentList @('start') -WorkingDirectory $PSScriptRoot -NoNewWindow -PassThru
+Ok "Frontend PID (cmd): $($frontendProc.Id)"
+
+function Test-PortListen($port) {
     try {
-        $tcpConnections = Get-NetTCPConnection -LocalPort 5000,8080 -ErrorAction SilentlyContinue
-        foreach ($conn in $tcpConnections) {
-            if ($conn.LocalPort -eq 5000 -and $conn.State -eq 'Listen') { $backendReady = $true }
-            if ($conn.LocalPort -eq 8080 -and $conn.State -eq 'Listen') { $frontendReady = $true }
-        }
+        $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+        return [bool]$conn
     } catch {
-        # Ignore errors
+        return $false
     }
-    
-    if ($backendReady -and $frontendReady) {
-        Write-Host "`n[SUCCESS] Both servers are ready!" -ForegroundColor Green
-        Write-Host "  Backend:  http://localhost:5000" -ForegroundColor Cyan
-        Write-Host "  Frontend: http://localhost:8080" -ForegroundColor Yellow
-        Write-Host "`nPress Ctrl+C to stop servers`n" -ForegroundColor White
+}
+
+Write-Host "`nWaiting for ports 5000/8080 to be ready..." -ForegroundColor Yellow
+$deadline = (Get-Date).AddSeconds(90)
+while ((Get-Date) -lt $deadline) {
+    if ((Test-PortListen 5000) -and (Test-PortListen 8080)) {
+        Ok "Both servers are listening"
         break
     }
-    
     Start-Sleep -Milliseconds 500
 }
 
-if (-not ($backendReady -and $frontendReady)) {
-    Write-Host "`n[WARNING] Servers may not be fully ready yet" -ForegroundColor Yellow
-    if (-not $backendReady) { Write-Host "  Backend (port 5000) not responding" -ForegroundColor Red }
-    if (-not $frontendReady) { Write-Host "  Frontend (port 8080) not responding" -ForegroundColor Red }
-    Write-Host "  Continuing to monitor...`n" -ForegroundColor Yellow
+if (-not ((Test-PortListen 5000) -and (Test-PortListen 8080))) {
+    Write-Host "[WARNING] Ports are not ready yet. Opening frontend anyway..." -ForegroundColor Yellow
 }
 
-# Continue monitoring
-try {
-    while ($true) {
-        $backendOutput = Receive-Job -Job $backendJob -ErrorAction SilentlyContinue
-        if ($backendOutput) {
-            $backendOutput | ForEach-Object {
-                Write-Host "[Backend] $_" -ForegroundColor Cyan
-            }
-        }
-        
-        $frontendOutput = Receive-Job -Job $frontendJob -ErrorAction SilentlyContinue
-        if ($frontendOutput) {
-            $frontendOutput | ForEach-Object {
-                Write-Host "[Frontend] $_" -ForegroundColor Yellow
-            }
-        }
-        
-        # Check if jobs are still running
-        $backendState = (Get-Job -Id $backendJob.Id -ErrorAction SilentlyContinue).State
-        $frontendState = (Get-Job -Id $frontendJob.Id -ErrorAction SilentlyContinue).State
-        
-        if ($backendState -ne 'Running' -or $frontendState -ne 'Running') {
-            Write-Host "`n[ERROR] Job stopped unexpectedly" -ForegroundColor Red
-            if ($backendState -ne 'Running') {
-                Write-Host "Backend job state: $backendState" -ForegroundColor Red
-            }
-            if ($frontendState -ne 'Running') {
-                Write-Host "Frontend job state: $frontendState" -ForegroundColor Red
-            }
-            break
-        }
-        
-        Start-Sleep -Milliseconds 100
+Write-Host "`nOpening browser: $frontendUrl" -ForegroundColor Cyan
+if (-not $NoBrowser) {
+    try {
+        Start-Process $frontendUrl | Out-Null
+    } catch {
+        Write-Host "[WARNING] Failed to open browser automatically" -ForegroundColor Yellow
     }
 }
-finally {
-    Write-Host "`n`nStopping servers..." -ForegroundColor Yellow
-    Stop-Job -Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
-    Remove-Job -Job $backendJob, $frontendJob -ErrorAction SilentlyContinue
-    Write-Host "[OK] Stopped" -ForegroundColor Green
+
+if ($AutoExitSeconds -gt 0) {
+    Write-Host "`nAuto-exit in $AutoExitSeconds seconds (CI mode)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds $AutoExitSeconds
+} else {
+    Write-Host "`nPress ENTER to stop servers..." -ForegroundColor Yellow
+    [void][System.Console]::ReadLine()
 }
+
+Write-Host "`nStopping servers..." -ForegroundColor Yellow
+
+try {
+    # port based kill (more reliable than cmd PID)
+    foreach ($p in @(5000, 8080)) {
+        $conns = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue
+        foreach ($c in $conns) {
+            try { Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue } catch {}
+        }
+    }
+} catch {}
+
+try { Stop-Process -Id $backendProc.Id -Force -ErrorAction SilentlyContinue } catch {}
+try { Stop-Process -Id $frontendProc.Id -Force -ErrorAction SilentlyContinue } catch {}
+
+Ok "Stopped"

@@ -150,7 +150,7 @@ flowchart LR
 **仕様ブランチ**（mainブランチから派生）:
 ```bash
 git checkout main
-git checkout -b <番号>-<短い名前>
+git checkout -b wip/<短い名前>
 ```
 例: `001-ocr-pdf-converter`
 

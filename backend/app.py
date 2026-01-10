@@ -4,6 +4,8 @@ Flask APIサーバー
 """
 import os
 import tempfile
+import uuid
+import time
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -23,6 +25,24 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB制限
 def allowed_file(filename):
     """ファイル拡張子チェック"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def safe_remove(path, attempts=5, delay_sec=0.2):
+    """Windowsの一時的なファイルロックを考慮して、削除をリトライする。"""
+    for i in range(attempts):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+            return True
+        except PermissionError as e:
+            # WinError 32 など
+            if i == attempts - 1:
+                print(f"[API WARN] ファイル削除失敗: {e} ({path})")
+                return False
+            time.sleep(delay_sec)
+        except Exception as e:
+            print(f"[API WARN] ファイル削除失敗: {e} ({path})")
+            return False
 
 
 @app.route('/api/health', methods=['GET'])
@@ -76,12 +96,20 @@ def ocr_process():
         confidence_threshold = float(request.form.get('confidence_threshold', 0.5))
         
         # ファイル保存
-        filename = secure_filename(file.filename)
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"input_{filename}")
-        output_path = os.path.join(app.config['UPLOAD_FOLDER'], f"output_{filename}")
+        original_name = file.filename
+        filename = secure_filename(original_name)
+        # secure_filename が空文字/拡張子欠落になる環境があるため補正
+        if not filename:
+            filename = 'upload.pdf'
+        if not filename.lower().endswith('.pdf'):
+            filename = f"{filename}.pdf"
+
+        token = uuid.uuid4().hex
+        input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"input_{token}_{filename}")
+        output_path = os.path.join(app.config['UPLOAD_FOLDER'], f"output_{token}_{filename}")
         
         file.save(input_path)
-        print(f"[API] ファイル受信: {filename}")
+        print(f"[API] ファイル受信: {original_name} -> {os.path.basename(input_path)}")
         
         # OCR処理実行
         result = process_pdf(
@@ -92,8 +120,7 @@ def ocr_process():
         )
         
         # 一時ファイル削除
-        if os.path.exists(input_path):
-            os.remove(input_path)
+        safe_remove(input_path)
         
         if result["success"]:
             return jsonify({
@@ -133,23 +160,20 @@ def download_file(file_id):
                 "error": "ファイルが見つかりません"
             }), 404
         
-        # ファイル送信後に削除
-        def cleanup():
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
         response = send_file(
             file_path,
             as_attachment=True,
             download_name=file_id.replace("output_", "searchable_")
         )
-        
-        # レスポンス送信後にクリーンアップ
-        # Flaskの after_this_request を使用
-        @app.after_request
-        def after(response):
-            cleanup()
-            return response
+
+        # レスポンス送信完了（接続クローズ）後にクリーンアップ
+        def cleanup():
+            try:
+                safe_remove(file_path)
+            except Exception as e:
+                print(f"[API WARN] 出力ファイル削除失敗: {e} ({file_path})")
+
+        response.call_on_close(cleanup)
         
         return response
         
@@ -168,4 +192,8 @@ if __name__ == '__main__':
     print("サーバー起動中...")
     print("URL: http://localhost:5000")
     print("=" * 60)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Windows環境で debug リローダーがプロセスを分岐させ、
+    # 起動スクリプト/ターミナルとの相性で終了してしまうことがあるため、
+    # 既定では reloader を無効化する。
+    debug_enabled = os.environ.get('FLASK_DEBUG', '0') == '1'
+    app.run(host='0.0.0.0', port=5000, debug=debug_enabled, use_reloader=False)

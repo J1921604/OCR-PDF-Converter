@@ -1,7 +1,7 @@
 # 機能仕様: OCR検索可能PDF変換Webアプリ
 
 **機能ブランチ**: `001-OCR-PDF-Converter`  
-**作成日**: 2026-01-15  
+**作成日**: 2026-1-15  
 **ステータス**: 実装完了（v1.0.0）  
 **入力**: スキャンPDFをOnnxOCRで高精度にOCR処理し、検索可能PDFに変換するWebアプリケーション
 
@@ -163,8 +163,8 @@ flowchart TD
 - **FR-005**: システムは、処理完了後、検索可能なPDFファイルをユーザーがダウンロードできること
 - **FR-006**: システムは、複数ページPDFの処理進捗を「ページ X/Y 処理中」形式でリアルタイム表示できること
 - **FR-007**: システムは、OCR処理中にエラーが発生した場合、エラー内容を明示的にユーザーに通知すること
-- **FR-008**: システムは、GitHub Pagesで静的ホスティングできる純粋なクライアントサイドアプリケーションであること（バックエンドサーバー不要）
-- **FR-009**: システムは、アップロードされたPDFファイルをサーバーに送信せず、ブラウザ内でのみ処理すること（プライバシー保護）
+- **FR-008**: システムは、フロントエンドをGitHub Pagesで静的ホスティングできること（SPAとしてビルド可能であること）
+- **FR-009**: システムは、アップロードされたファイルを処理のためにローカル/指定バックエンドへ送信するが、処理完了後は一時ファイルを確実に削除し、永続保存しないこと
 - **FR-010**: システムは、PDFファイル形式を検証し、非PDFファイルが選択された場合はエラーメッセージを表示すること
 - **FR-011**: システムは、様々なページサイズ（A4, A3, Letter, Legal, B4, カスタムサイズ）に対応し、自動的に適切な解像度で処理できること
 - **FR-012**: システムは、画像ファイル（JPEG, PNG, TIFF）を直接アップロードした場合、内部でPDFに変換してからOCR処理を実行できること
@@ -214,50 +214,37 @@ flowchart LR
 
 ## 前提条件
 
-- OCRエンジンとして、WebAssembly版のOnnxOCR（またはTesseract.js）をブラウザ内で実行可能であること
-- PDFレンダリングには、PDF.js（Mozilla製）を使用すること
-- PDF生成には、pdf-lib（JavaScriptライブラリ）を使用すること
-- GitHub Pagesで静的ホスティングできるため、バックエンドAPIは不要（全処理をクライアントサイドで完結）
+- OCR処理はPythonバックエンド（Flask + OnnxOCR）で実行する
+- フロントエンドはReact SPAとしてビルドし、ローカル開発時は `http://localhost:8080` で動作する
+- 画像入力（JPEG/PNG/TIFF）はフロントエンド側でPDFへ変換し、バックエンドにはPDFとして送信する
+- GitHub Pagesはフロントエンドの静的配信先として利用できる（OCR処理は別途バックエンドが必要）
 
 ## 制約
 
-- ファイルサイズ上限: 10MB（GitHub Pagesの制約とブラウザメモリ制限を考慮）
+- ファイルサイズ上限: 10MB（フロントエンド側の検証に準拠）
 - 対応言語: 日本語のみ（将来的に多言語対応可能）
-- 処理速度: 1ページあたり5秒以内（P95パーセンタイル）
+- 処理速度: 1ページあたり5秒以内（P95パーセンタイル、環境依存）
 - ブラウザサポート: Chrome 100+、Firefox 100+、Edge 100+、Safari 15+
-- オフライン動作: 初回ロード後はネットワーク不要（Service Workerによるキャッシュ）
+- オフライン動作: ローカル実行時はオフラインでも利用可能（依存パッケージ/モデルがローカルに存在すること）
 
-## 想定される技術スタック（参考）
+## 採用技術スタック（実装準拠）
 
-以下は実装計画（plan.md）で詳細化されますが、仕様段階での前提として記載します。
-
-- **フロントエンド**: HTML5, CSS3, JavaScript（Vanilla JSまたはReact/Vue.js）
-- **PDFレンダリング**: PDF.js
-- **OCRエンジン**: Tesseract.js（WebAssembly）またはOnnxOCR
-- **PDF生成**: pdf-lib
-- **ホスティング**: GitHub Pages
+- **バックエンド**: Python 3.10.11 / Flask / OnnxOCR / pypdfium2 / pypdf / ReportLab / OpenCV
+- **フロントエンド**: React 18 / Webpack 5
+- **ホスティング**: GitHub Pages（フロントエンドの静的配信）
 - **CI/CD**: GitHub Actions
 
 ```mermaid
-flowchart TD
-    subgraph client["クライアントサイド処理（ブラウザ内）"]
-        A[PDFアップロード] --> B[PDF.js: PDF→画像変換]
-        B --> C[Tesseract.js: OCR処理]
-        C --> D[pdf-lib: テキストレイヤー生成]
-        D --> E[pdf-lib: PDF合成]
-        E --> F[ダウンロード]
-    end
-    
-    subgraph hosting["GitHub Pages"]
-        G[静的HTML/CSS/JS]
-        H[WASM/OCRモデル]
-    end
-    
-    G -.ロード.-> A
-    H -.ロード.-> C
-    
-    style client fill:#e1f5ff
-    style hosting fill:#d1ecf1
+flowchart LR
+    A[ユーザー<br/>ブラウザ] -->|"PDF/画像アップロード"| B[React UI]
+    B -->|"画像→PDF変換（必要時）"| B
+    B -->|"POST /api/ocr/process"| C[Flask API]
+    C --> D[pypdfium2: PDF→画像]
+    D --> E[OnnxOCR: OCR]
+    E --> F[ReportLab: 透明テキスト]
+    F --> G[pypdf: 既存PDFへ埋込]
+    G -->|"GET /api/ocr/download/{file_id}"| B
+    B -->|"ダウンロード"| A
 ```
 
 ## 除外事項

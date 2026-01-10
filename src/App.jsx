@@ -1,5 +1,5 @@
 // App.jsx - メインアプリケーションコンポーネント
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileUploader } from './components/FileUploader';
 import { OCRProgress } from './components/OCRProgress';
 import { DownloadButton } from './components/DownloadButton';
@@ -30,19 +30,39 @@ export function App() {
 
   const [searchablePDF, setSearchablePDF] = useState(null);
   const [globalError, setGlobalError] = useState(null);
+  const [uploaderKey, setUploaderKey] = useState(0);
+
+  // 「ファイルが変わった時だけ」リセット/キャンセルするための参照
+  const prevFileRef = useRef(null);
+  const isProcessingRef = useRef(false);
+
+  useEffect(() => {
+    isProcessingRef.current = isProcessing;
+  }, [isProcessing]);
 
   // ファイルが変更された場合、OCR処理をリセット
   useEffect(() => {
-    if (file) {
+    // fileが未選択に戻った場合は参照もクリア
+    if (!file) {
+      prevFileRef.current = null;
+      return;
+    }
+
+    // 初回選択 or 別ファイルへの変更時のみ発火させる
+    if (prevFileRef.current !== file) {
       console.log('[App] 新しいファイルが選択されました。前回の処理をリセット');
       setSearchablePDF(null);
       setGlobalError(null);
-      if (isProcessing) {
-        console.log('[App] 処理中のためキャンセル実行');
+
+      // 前回の状態（進捗表示含む）を確実にリセット
+      if (prevFileRef.current) {
+        console.log('[App] 前回の状態をリセット');
         cancelProcessing();
       }
+
+      prevFileRef.current = file;
     }
-  }, [file, isProcessing, cancelProcessing]);
+  }, [file, cancelProcessing]);
 
   const handleOCRStart = async () => {
     if (!file) return;
@@ -75,6 +95,8 @@ export function App() {
     clearFile();
     setSearchablePDF(null);
     setGlobalError(null);
+    // <input type="file"> の値も確実にクリアする
+    setUploaderKey((k) => k + 1);
   };
 
   const showError = uploadError || ocrError || globalError;
@@ -88,6 +110,7 @@ export function App() {
 
       <main className="app-main">
         <FileUploader
+          key={uploaderKey}
           onFileSelect={handleFileSelect}
           fileInfo={fileInfo}
           error={uploadError}
@@ -131,10 +154,10 @@ export function App() {
           isReady={!!searchablePDF}
         />
 
-        {searchablePDF && (
+        {file && (
           <div className="reset-section">
             <button type="button" onClick={handleReset} className="reset-button">
-              別のファイルを変換
+              {isProcessing ? 'キャンセルして別のファイルを変換' : '別のファイルを変換'}
             </button>
           </div>
         )}

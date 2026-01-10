@@ -13,7 +13,7 @@
 ✅ **日本語OCR最適化** - PaddleOCRベースの日本語特化モデル  
 ✅ **高精度テキスト抽出** - Tesseract.jsより2-3倍高速で精度も向上  
 ✅ **複数ページ対応** - バッチ処理でリアルタイム進捗表示  
-✅ **大容量対応** - 50MBまでのPDFファイルに対応  
+✅ **ファイル制限** - フロント側は 10MB まで（バックエンド受信上限は 50MB だが運用上は 10MB）  
 ✅ **透明テキストレイヤー** - ReportLabで完全透明なテキストレイヤーを合成  
 
 ```mermaid
@@ -47,7 +47,9 @@ flowchart LR
 
 ## デモ
 
-🌐 **ライブデモ**: [https://j1921604.github.io/OCR-PDF-Converter/](https://j1921604.github.io/OCR-PDF-Converter/)
+🌐 **ライブデモ（UIのみ）**: [https://j1921604.github.io/OCR-PDF-Converter/](https://j1921604.github.io/OCR-PDF-Converter/)
+
+※GitHub Pages（HTTPS）上のフロントエンドから `http://localhost:5000` を呼ぶことは mixed content でブロックされるため、Pages単体ではOCR処理は動きません。OCRを動かす場合はローカル起動してください。
 
 ## クイックスタート
 
@@ -76,9 +78,11 @@ flowchart LR
 #### 1. バックエンド起動
 
 ```powershell
-cd backend
+py -3.10 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -3.10 -m pip install --upgrade pip
 py -3.10 -m pip install -r requirements.txt
-py -3.10 app.py
+python backend\app.py
 ```
 
 #### 2. フロントエンド起動（別ターミナル）
@@ -93,8 +97,8 @@ npm start
 ## 使い方
 
 1. **ファイルを選択**  
-   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイル（50MB以下）を選択します。  
-   **対応形式**: PDF
+   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイル（10MB以下）を選択します。  
+   **対応形式**: PDF / JPEG / PNG / TIFF（画像はフロント側でPDFに変換してから送信します）
 
 2. **OCR変換開始**  
    「OCR変換開始」ボタンをクリックすると、Pythonバックエンドで高精度OCR処理が開始されます。  
@@ -156,7 +160,7 @@ OCR-PDF-Converter/
 ├── backend/                    # Pythonバックエンド
 │   ├── app.py                 # Flask APIサーバー
 │   ├── main.py                # OCRエンジン実装
-│   └── requirements.txt       # Python依存パッケージ
+│   └── (注) requirements.txt はリポジトリ直下
 ├── specs/                      # 仕様ドキュメント
 │   └── 001-OCR-PDF-Converter/
 │       ├── spec.md            # 機能仕様
@@ -178,7 +182,6 @@ OCR-PDF-Converter/
 │   └── workflows/
 │       └── pages.yml          # GitHub Actionsデプロイ
 ├── start-full.ps1             # ワンコマンド起動スクリプト
-├── start-backend.ps1          # バックエンド単独起動
 ├── package.json               # npm依存関係
 └── README.md                  # このファイル
 ```
@@ -187,25 +190,12 @@ OCR-PDF-Converter/
 
 ### ブランチ戦略
 
-```mermaid
-flowchart TB
-    M[main<br/>本番] --> S[001-OCR-PDF-Converter<br/>仕様ブランチ]
-    S --> I1[feature/impl-001-OCR-PDF-Converter<br/>実装ブランチ]
-    I1 -->|レビュー承認| S
-    S -->|全機能完了| M
-    
-    style M fill:#d1ecf1
-    style S fill:#fff3cd
-    style I1 fill:#d4edda
-```
-
-- **mainブランチ**: 本番環境（GitHub Pages）
-- **仕様ブランチ** (`001-OCR-PDF-Converter`): 機能仕様とドキュメント
-- **実装ブランチ** (`feature/impl-001-OCR-PDF-Converter`): コード実装
+プロジェクト憲法（`.specify/memory/constitution.md`）に従い、基本は **main単一運用**です。
+必要に応じて短命の作業ブランチ（例: `wip/<topic>`）を切ってもよいですが、最終的にmainへマージしてブランチは削除します。
 
 ### 開発ワークフロー
 
-1. **憲法確認**: [.specify/memory/constitution.md](.specify/memory/constitution.md) を読む
+1. **憲法確認**: https://github.com/J1921604/OCR-PDF-Converter/blob/main/.specify/memory/constitution.md を読む
 2. **仕様作成**: `specs/001-OCR-PDF-Converter/spec.md` で要件定義
 3. **実装**: `feature/impl-001-OCR-PDF-Converter` ブランチで開発
 4. **テスト**: 単体テスト → 統合テスト → E2Eテスト
@@ -235,8 +225,10 @@ npm run format
 
 GitHub Actionsで自動デプロイされます。
 
+※デプロイされるのはフロントエンド（静的ファイル）のみです。OCR処理にはバックエンドが必要です。
+
 ```yaml
-# .github/workflows/deploy.yml
+# .github/workflows/pages.yml
 on:
   push:
     branches: [ main ]
@@ -250,18 +242,10 @@ on:
 
 **症状**: `npm start` または `.\start-dev.ps1` 実行後、サーバーが自動停止する
 
-**原因**: PowerShellのプロセス管理の問題
-
 **解決方法**:
-```powershell
-# 新しいPowerShellウィンドウで起動
-Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd "c:\path\to\OCR-PDF-Converter"; npm start'
-```
 
-または、別のターミナル（WSL、Git Bash等）を使用：
-```bash
-npm start
-```
+- まず `\.\start-full.ps1` の利用を推奨します（同一ウィンドウ内で安定起動/停止します）。
+- 8080/5000番ポートが他プロセスで使用中の場合は、先に停止してから再実行してください。
 
 ### 2. CSP violation エラー
 
@@ -273,7 +257,7 @@ npm start
 - F12キー → Console タブでエラーメッセージを確認
 - `public/index.html` の CSP meta tagを確認
 
-**解決済み**: 最新版（commit 7b90b1b1以降）では修正済み
+**補足**: API接続先（`connect-src`）やワーカー（`worker-src`）の許可が不足していると発生します。
 
 ### 3. PDFファイル読み込みエラー
 
@@ -289,7 +273,7 @@ npm start
 - 別のPDFで試す
 - 暗号化を解除してから再試行
 
-### 3. OCR精度が低い
+### 4. OCR精度が低い
 
 **原因**:
 - スキャン解像度が低い（推奨: 300dpi以上）
@@ -306,7 +290,7 @@ npm start
 - **1ページPDF処理時間**: 5秒以内（P95、OnnxOCR CPU推論）
 - **10ページPDF処理時間**: 50秒以内（P95）
 - **メモリ使用量**: Python 512MB、React 256MB（ピーク時）
-- **ファイルサイズ制限**: 50MB
+- **ファイルサイズ制限**: 10MB（フロント制限。バックエンドは50MB設定だが運用上10MB）
 
 ## よくある質問（FAQ）
 
@@ -314,7 +298,7 @@ npm start
 A: Pythonバックエンドはローカル環境（localhost:5000）で動作します。サーバーへのファイル送信は行われません。
 
 **Q2: 処理できるファイルサイズの上限は？**  
-A: 50MBまで対応しています。
+A: フロント側は 10MB までです（バックエンドは 50MB まで受け付けますが、運用上は 10MB を上限としています）。
 
 **Q3: 日本語以外の言語も対応していますか？**  
 A: OnnxOCRは多言語対応（日本語、英語、中国語）ですが、現在は日本語に最適化しています。
@@ -353,13 +337,13 @@ A: Python環境とOnnxOCRモデルが事前にインストールされていれ�
 
 ## リンク
 
-- 📖 **仕様書**: [specs/001-OCR-PDF-Converter/spec.md](specs/001-OCR-PDF-Converter/spec.md)
-- 🛠️ **技術要件**: [specs/001-OCR-PDF-Converter/requirements.md](specs/001-OCR-PDF-Converter/requirements.md)
-- ✅ **チェックリスト**: [specs/001-OCR-PDF-Converter/checklists/requirements.md](specs/001-OCR-PDF-Converter/checklists/requirements.md)
-- 📜 **プロジェクト憲法**: [.specify/memory/constitution.md](.specify/memory/constitution.md)
+- 📖 **仕様書**: https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/spec.md
+- 🛠️ **技術要件**: https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/requirements.md
+- ✅ **チェックリスト**: https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/checklists/requirements.md
+- 📜 **プロジェクト憲法**: https://github.com/J1921604/OCR-PDF-Converter/blob/main/.specify/memory/constitution.md
 
 ---
 
-**作成日**: 2026-01-10  
+**作成日**: 2026-1-15  
 **バージョン**: 1.0.0  
 **メンテナ**: J1921604

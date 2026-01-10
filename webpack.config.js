@@ -27,11 +27,16 @@ module.exports = {
   },
   resolve: {
     extensions: ['.js', '.jsx'],
+    // Some libraries still touch `process` in browser builds.
+    // Provide a lightweight polyfill to avoid runtime "process is not defined".
     fallback: {
-      "process": false,
+      process: require.resolve('process/browser'),
     },
   },
   plugins: [
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+    }),
     new webpack.DefinePlugin({
       'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || 'http://localhost:5000'),
     }),

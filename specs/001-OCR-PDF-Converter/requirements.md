@@ -1,279 +1,112 @@
 # 技術要件: OCR検索可能PDF変換Webアプリ
 
-**機能ブランチ**: `001-OCR-PDF-Converter`  
-**関連仕様**: [spec.md](./spec.md)  
-**作成日**: 2026-01-10  
+**関連ドキュメント**:
+
+- 仕様: https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/spec.md
+- 計画: https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/plan.md
+- タスク: https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/tasks.md
+
+**作成日**: 2026-1-15  
+**バージョン**: 1.0.0
 
 ## 概要
 
-本ドキュメントは、OCR検索可能PDF変換Webアプリの技術的要件を定義します。GitHub Pagesでホスティングされる完全なクライアントサイドアプリケーションとして、ブラウザ内でPDF処理を完結させます。
+本アプリは、**ローカル実行のPythonバックエンド（Flask + onnxocr）**でOCRと検索可能PDF生成を行い、**Reactフロントエンド**はファイル選択・進捗表示・ダウンロードを担います。
 
-## アーキテクチャ原則
+GitHub Pages は **フロントエンドの静的ホスティングのみ**に利用できます（Pages単体ではOCR処理は完結しません）。
 
-### クライアントサイド処理
+## アーキテクチャ要件
+
+### ハイブリッド（フロント + ローカルバックエンド）
 
 ```mermaid
 flowchart TD
-    A[ブラウザ] -->|全処理実行| B[GitHub Pages<br/>静的ホスティング]
-    
-    subgraph browser["ブラウザ内処理"]
-        C[PDFファイル読込]
-        D[PDF→画像変換]
-        E[OCR処理]
-        F[テキストレイヤー生成]
-        G[PDF合成]
-        H[ダウンロード]
-    end
-    
-    C --> D
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-    
-    style browser fill:#e1f5ff
-    style B fill:#d1ecf1
+  U[ユーザー] --> FE[React フロントエンド]
+  FE -->|multipart/form-data| API[Flask API /api/ocr/process]
+  API --> OCR[onnxocr + 前処理]
+  OCR --> GEN[ReportLab で透明テキスト層]
+  GEN --> MERGE[pypdf で合成]
+  API -->|file_id| FE
+  FE -->|GET| DL[Flask /api/ocr/download/{file_id}]
+  DL --> FE
+  FE --> OUT[検索可能PDFをダウンロード]
 ```
 
-### セキュリティ・プライバシー
+### APIエンドポイント（現行実装）
 
-- **データの外部送信禁止**: アップロードされたPDFファイルは、いかなる外部サーバーにも送信されない
-- **ブラウザ内完結処理**: 全ての処理（PDF解析、OCR、PDF生成）をブラウザのメモリ内で実行
-- **一時データの削除**: 処理完了後、ブラウザメモリから全データを削除
-- **HTTPS通信**: GitHub Pagesは自動的にHTTPS化されるため、通信は暗号化される
+- `GET /api/health`（疎通確認）
+- `POST /api/ocr/process`（OCR処理開始）
+- `GET /api/ocr/download/<file_id>`（生成PDFダウンロード）
 
-## 技術スタック
+対応コード:
 
-### 必須ライブラリ
+- `backend/app.py`
+- `backend/main.py`
 
-| ライブラリ | バージョン | 用途 | ライセンス |
-|-----------|------------|------|------------|
-| PDF.js | 4.0+ | PDFページを画像としてレンダリング | Apache 2.0 |
-| Tesseract.js | 5.0+ | WebAssemblyベースのOCRエンジン（日本語対応） | Apache 2.0 |
-| pdf-lib | 1.17+ | PDF生成・操作（テキストレイヤー追加） | MIT |
-| sharp (オプション) | 0.32+ | 画像前処理（JPEG/PNG/TIFF→正規化） | Apache 2.0 |
-| React (オプション) | 18.0+ | UIコンポーネント管理 | MIT |
+## セキュリティ・プライバシー要件
 
-```mermaid
-flowchart LR
-    subgraph dependencies["依存ライブラリ"]
-        A[PDF.js<br/>PDFレンダリング]
-        B[Tesseract.js<br/>OCRエンジン]
-        C[pdf-lib<br/>PDF生成]
-        D[React<br/>UI管理]
-    end
-    
-    subgraph output["成果物"]
-        E[index.html]
-        F[bundle.js]
-        G[styles.css]
-        H[WASM/モデル]
-    end
-    
-    A --> F
-    B --> F
-    B --> H
-    C --> F
-    D --> F
-    
-    F --> I[GitHub Pages]
-    E --> I
-    G --> I
-    H --> I
-    
-    style dependencies fill:#fff3cd
-    style output fill:#d4edda
-```
+- **外部（インターネット）への送信禁止**: ファイルは外部クラウドへアップロードしない。
+- **ローカル送信は許容**: 処理のために `localhost` のバックエンドへ送信する（同一PC内）。
+- **一時ファイルの扱い**: バックエンドはOSの一時ディレクトリ（`tempfile.gettempdir()`）を使用し、処理後に削除する（`backend/app.py`）。
+- **CORS**: フロント⇄バック間の開発用途でCORSを許可（`Flask-CORS`）。
 
-### 開発ツール
+## 技術スタック要件
 
-- **パッケージマネージャ**: npm または yarn
-- **バンドラー**: Webpack または Vite
-- **トランスパイラ**: Babel (ES6+ → ES5)
-- **CI/CD**: GitHub Actions
-- **静的解析**: ESLint, Prettier
-- **テスト**: Jest, React Testing Library
+### フロントエンド（Node）
 
-## パフォーマンス要件
+- React 18（UI）: `src/*`
+- Webpack/Babel（ビルド）: `webpack.config.js`, `babel.config.js`
+- PDF.js（ページ数取得/レンダリング用途）: `src/services/pdfProcessor.js`
 
-### 処理速度
+### バックエンド（Python）
 
-| 処理 | 目標時間 | 測定方法 |
-|------|----------|----------|
-| 1ページPDF (A4, 300dpi) OCR処理 | 5秒以内 (P95) | Performance API |
-| 10ページPDF OCR処理 | 50秒以内 (P95) | Performance API |
-| PDFアップロード→プレビュー表示 | 1秒以内 | Performance API |
-| PDF生成→ダウンロード準備 | 2秒以内 | Performance API |
+Python依存は **`requirements.txt` を唯一の正**とする。
 
-```mermaid
-gantt
-    title OCR処理タイムライン（1ページ）
-    dateFormat s
-    axisFormat %Ss
-    
-    section PDFロード
-    ファイル読込 :0, 500ms
-    
-    section レンダリング
-    PDF→画像変換 :500ms, 1000ms
-    
-    section OCR
-    OCR処理 :1500ms, 3000ms
-    
-    section PDF生成
-    テキストレイヤー生成 :4500ms, 500ms
-    PDF合成 :5000ms, 500ms
-```
+- Flask / Flask-CORS（API）
+- onnxocr（OCR）
+- opencv-python / numpy（前処理）
+- pypdfium2（PDF→画像）
+- reportlab（透明テキスト層の描画）
+- pypdf（合成）
+- Pillow（画像処理補助）
 
-### メモリ使用量
+### 開発・テスト
 
-- **ピーク時メモリ**: 2GB以下（ブラウザタブあたり）
-- **平均メモリ**: 500MB以下（1ページPDF処理時）
-- **メモリリーク防止**: 処理完了後、全オブジェクトを明示的にnull化
+- Jest（ユニットテスト）: `tests/unit/*`
+- Cypress（E2E）: `cypress/*`
 
-### ファイルサイズ制限
+## 実行環境要件（Windows）
 
-- **入力ファイル**: 10MB以下（PDF, JPEG, PNG, TIFF対応）
-- **出力PDF**: 入力ファイル + テキストレイヤー（通常、入力の110%程度）
-- **対応ページサイズ**: A4, A3, A5, Letter, Legal, B4, B5, カスタムサイズ（最大4000×4000ピクセル）
-- **アプリケーションバンドル**: 5MB以下（初回ロード）
-- **OCRモデル**: 50MB以下（日本語モデル）
+- Node.js 18系
+- Python 3.10.11
+- Python仮想環境: `.venv`（`py -3.10 -m venv .venv` で作成し、`requirements.txt` からインストール）
+
+## パフォーマンス要件（目標）
+
+- 1ページ（A4相当 / 300dpi相当）: 体感待ち時間が過度にならないこと
+- 進捗表示: **停止して見えない状態にしない**（UIは処理中であることが分かること）
+
+## ファイル制限
+
+- **フロント入力制限（現行）**: 10MB（`src/utils/fileValidator.js`）
+- **バックエンド受信上限（現行）**: 50MB（`backend/app.py`）
+
+運用上の実効上限は **10MB** とする（上限を上げる場合はフロント/バック/ドキュメントを同時に変更）。
 
 ## ブラウザ互換性
 
-### 対応ブラウザ
+- Chrome / Edge / Firefox の最新安定版を対象
+- 必須: File API, Fetch API, Blob URL
 
-| ブラウザ | 最小バージョン | 備考 |
-|----------|----------------|------|
-| Google Chrome | 100+ | 推奨ブラウザ |
-| Mozilla Firefox | 100+ | 完全対応 |
-| Microsoft Edge | 100+ | Chromiumベース |
-| Safari | 15+ | WebAssembly対応必須 |
+## GitHub Pages（制約込み）
 
-### 必須ブラウザ機能
+- Pages は **静的フロントエンドのみ**を配布する。
+- Pages（HTTPS）から `http://localhost:5000` を呼ぶことは **mixed content** でブロックされるため、Pages上ではOCR機能は動かない。
+- OCRをPages上で動かすには、バックエンドを **HTTPS** で公開し、フロント側の `REACT_APP_API_URL` をそのURLに向ける必要がある。
 
-- WebAssembly (WASM) サポート
-- File API (ファイルアップロード)
-- Blob API (PDFダウンロード)
-- Canvas API (画像レンダリング)
-- Service Worker (オフライン対応・キャッシュ)
+### GitHub Actions（現行）
 
-```mermaid
-flowchart TD
-    A{ブラウザチェック}
-    A -->|WASM対応| B{File API対応}
-    A -->|非対応| Z[エラー: ブラウザ非対応]
-    B -->|対応| C{Canvas API対応}
-    B -->|非対応| Z
-    C -->|対応| D[アプリ起動]
-    C -->|非対応| Z
-    
-    style D fill:#d4edda
-    style Z fill:#f8d7da
-```
-
-## GitHub Pages デプロイ要件
-
-### ディレクトリ構造
-
-```
-/
-├── index.html              # エントリーポイント
-├── assets/
-│   ├── js/
-│   │   ├── main.bundle.js  # アプリケーションロジック
-│   │   └── vendors.bundle.js # サードパーティライブラリ
-│   ├── css/
-│   │   └── styles.css      # スタイルシート
-│   └── wasm/
-│       ├── tesseract-core.wasm
-│       └── jpn.traineddata # 日本語OCRモデル
-├── manifest.json           # PWAマニフェスト
-├── service-worker.js       # Service Worker（オフライン対応）
-└── README.md               # プロジェクト説明
-```
-
-### GitHub Actions CI/CD
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
-      - uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-```
-
-### ビルドプロセス
-
-```mermaid
-flowchart LR
-    A[ソースコード] --> B[ESLint検証]
-    B --> C[トランスパイル<br/>Babel]
-    C --> D[バンドル<br/>Webpack]
-    D --> E[最適化<br/>Minify]
-    E --> F[テスト実行<br/>Jest]
-    F --> G{テスト合格?}
-    G -->|Yes| H[dist/生成]
-    G -->|No| I[ビルド失敗]
-    H --> J[GitHub Pages<br/>デプロイ]
-    
-    style J fill:#d4edda
-    style I fill:#f8d7da
-```
-
-## データフロー
-
-### PDFアップロードからダウンロードまでの流れ
-
-```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant UI as UIコンポーネント
-    participant PDFLoader as PDF.js
-    participant OCR as Tesseract.js
-    participant Generator as pdf-lib
-    
-    User->>UI: PDFファイル選択
-    UI->>PDFLoader: ファイル読込
-    PDFLoader->>PDFLoader: PDF解析
-    PDFLoader-->>UI: ページ数、サイズ表示
-    
-    User->>UI: OCR開始ボタンクリック
-    
-    loop 各ページ
-        UI->>PDFLoader: ページN画像変換
-        PDFLoader-->>UI: 画像データ (300dpi)
-        UI->>OCR: 画像→OCR処理
-        OCR-->>UI: テキスト + 座標
-        UI->>UI: 進捗更新 (N/総ページ)
-    end
-    
-    UI->>Generator: OCR結果 + 元PDF
-    Generator->>Generator: テキストレイヤー生成
-    Generator->>Generator: PDF合成
-    Generator-->>UI: 検索可能PDF (Blob)
-    
-    UI-->>User: ダウンロードボタン表示
-    User->>UI: ダウンロード
-    UI-->>User: PDFファイル保存
-```
+デプロイワークフローは `/.github/workflows/pages.yml` を参照する。
 
 ## エラーハンドリング
 
@@ -313,6 +146,9 @@ stateDiagram-v2
 
 ### Content Security Policy (CSP)
 
+※本プロジェクトは開発時に `http://localhost:5000` のバックエンドへ接続するため、`connect-src 'none'` は要件として不適切。
+本番で同一オリジン（リバプロ等）にする場合は `connect-src 'self'` のみでよい。
+
 ```html
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
@@ -320,7 +156,7 @@ stateDiagram-v2
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob:;
   worker-src 'self' blob:;
-  connect-src 'none';
+  connect-src 'self' http://localhost:5000;
 ">
 ```
 
@@ -406,4 +242,4 @@ describe('PDFProcessor', () => {
 
 ---
 
-**次のステップ**: この技術要件に基づき、`/speckit.plan`コマンドで実装計画（plan.md）を作成し、アーキテクチャと開発フェーズを詳細化します。
+**次のステップ**: 本要件に基づき、ドキュメント整合（README / DEPLOY / 完全仕様書）を進め、最終的にJest/Cypressが再度グリーンであることを確認する。

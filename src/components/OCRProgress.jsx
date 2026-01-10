@@ -2,7 +2,8 @@
 import React from 'react';
 
 export function OCRProgress({ isProcessing, progress, pageInfo }) {
-  if (!isProcessing && progress === 0) {
+  // 未処理状態（progress=0かつ未開始）または完了状態（progress=100かつ処理終了）は非表示
+  if (!isProcessing && (progress === 0 || progress === 100)) {
     return null;
   }
 

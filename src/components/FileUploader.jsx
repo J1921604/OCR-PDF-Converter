@@ -1,6 +1,7 @@
 // FileUploader.jsx - PDFアップロードコンポーネント
 import React, { useRef } from 'react';
 import { getUserFriendlyErrorMessage } from '../utils/errorHandler';
+import { MAX_FILE_SIZE_MB } from '../utils/fileValidator';
 
 export function FileUploader({ onFileSelect, fileInfo, error, isLoading, disabled }) {
   const fileInputRef = useRef(null);
@@ -60,7 +61,7 @@ export function FileUploader({ onFileSelect, fileInfo, error, isLoading, disable
         <button type="button" disabled={isLoading || disabled}>
           {isLoading ? 'ファイル処理中...' : 'ファイルを選択'}
         </button>
-        <p className="file-info-text">対応形式: PDF, JPEG, PNG, TIFF（50MB以下）</p>
+        <p className="file-info-text">対応形式: PDF, JPEG, PNG, TIFF（{MAX_FILE_SIZE_MB}MB以下）</p>
       </div>
 
       {fileInfo && (

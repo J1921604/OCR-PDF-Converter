@@ -2,6 +2,8 @@
 
 このドキュメントでは、OCR検索可能PDF変換アプリケーション（OnnxOCR + Python Backend）のローカルセットアップとGitHub Pagesデプロイ方法を説明します。
 
+重要: GitHub Pages は静的ホスティングのため **フロントエンドのみ**を公開します。OCR処理はバックエンドが必要で、Pages（HTTPS）から `http://localhost:5000` を呼ぶことは mixed content でブロックされます。
+
 ## 目次
 
 1. [前提条件](#前提条件)
@@ -241,14 +243,16 @@ your-domain.com
 2. PDF.js ワーカーが CDN から読み込まれているか確認
 3. `public/index.html` の CSP ヘッダーを確認
 
-### ワーカーエラー
+### GitHub Pages 上でOCRが動かない
 
-**症状**: Tesseract.js または PDF.js のワーカーがエラーを起こす
+**症状**: Pages ではUIは表示されるが、OCR処理が実行できない / APIに接続できない
+
+**原因**: Pages は HTTPS で提供されるため、`http://localhost:5000` へのアクセスは mixed content としてブロックされる
 
 **解決方法**:
-1. `public/index.html` の CSP に `worker-src blob:` が含まれているか確認
-2. `wasm-unsafe-eval` が script-src に含まれているか確認
-3. ブラウザのコンソールで詳細なエラーメッセージを確認
+
+1. OCRを使う場合はローカルで `\.\start-full.ps1` を実行して `http://localhost:8080` から利用する
+2. Pages上でもOCRを動かしたい場合は、バックエンドを **HTTPS** で公開し、フロント側の `REACT_APP_API_URL` をそのURLに向けてビルドする
 
 ## デプロイ後の確認事項
 
@@ -257,8 +261,8 @@ your-domain.com
 ### 1. 基本機能
 - [ ] ページが正常に表示される
 - [ ] ファイルアップロードが動作する
-- [ ] OCR処理が実行できる
-- [ ] PDFダウンロードが動作する
+- [ ] （ローカル起動時）OCR処理が実行できる
+- [ ] （ローカル起動時）PDFダウンロードが動作する
 
 ### 2. パフォーマンス
 - [ ] ページの読み込み速度が許容範囲内

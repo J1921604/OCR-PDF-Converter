@@ -3,7 +3,12 @@ import { useState, useCallback, useRef } from 'react';
 import { handleOCRError } from '../utils/errorHandler';
 
 // APIエンドポイント設定
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// webpack.DefinePlugin で `process.env.REACT_APP_API_URL` は文字列にインライン化される想定。
+// ただしテスト/ブラウザ環境で `process` が存在しないケースもあるため安全に評価する。
+const API_BASE_URL =
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_URL)
+    ? process.env.REACT_APP_API_URL
+    : 'http://localhost:5000';
 
 export function useOCR() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,8 +55,19 @@ export function useOCR() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'OCR処理に失敗しました');
+        let message = 'OCR処理に失敗しました';
+        try {
+          const errorData = await response.json();
+          message = errorData?.error || message;
+        } catch (_) {
+          try {
+            const text = await response.text();
+            if (text) message = text;
+          } catch (_) {
+            // ignore
+          }
+        }
+        throw new Error(message);
       }
 
       const result = await response.json();
@@ -70,7 +86,14 @@ export function useOCR() {
       });
 
       if (!downloadResponse.ok) {
-        throw new Error('PDFのダウンロードに失敗しました');
+        let message = 'PDFのダウンロードに失敗しました';
+        try {
+          const errorData = await downloadResponse.json();
+          message = errorData?.error || message;
+        } catch (_) {
+          // ignore
+        }
+        throw new Error(message);
       }
 
       const pdfBlob = await downloadResponse.blob();
@@ -90,7 +113,8 @@ export function useOCR() {
         return { textLayers: [], pdfBlob: null };
       }
       
-      const handledError = handleOCRError(err, 0);
+      // Pythonバックエンドが返すエラー詳細を潰さないよう、ページ番号は付与しない
+      const handledError = handleOCRError(err);
       setError(handledError);
       throw handledError;
     } finally {
@@ -103,8 +127,12 @@ export function useOCR() {
   const cancelProcessing = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+      // UI状態を確実に初期化
       setIsProcessing(false);
       setProgress(0);
+      setOcrResults([]);
+      setTextLayers([]);
+      setError(null);
       console.log('[useOCR] 処理をキャンセルしました');
     }
   }, []);
