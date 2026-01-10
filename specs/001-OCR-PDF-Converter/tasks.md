@@ -20,20 +20,20 @@
 
 **目的**: プロジェクト初期化と開発環境構築
 
-- [ ] T001 プロジェクトディレクトリ構造を作成（plan.md記載のフォルダ構造に従う）
-- [ ] T002 [P] package.jsonを作成し依存パッケージを定義（pdfjs-dist@4.0.379, tesseract.js@5.1.0, pdf-lib@1.17.1, react@18.2.0）
-- [ ] T003 [P] webpack.config.jsを作成しバンドル設定を記述（エントリーポイント: src/index.jsx、出力: dist/）
-- [ ] T004 [P] babel.config.jsを作成しトランスパイル設定（ES6+ → ES5、React JSX対応）
-- [ ] T005 [P] .eslintrc.jsonを作成しコード品質チェック設定
-- [ ] T006 [P] .prettierrc.jsonを作成しコードフォーマット設定
-- [ ] T007 [P] jest.config.jsを作成し単体テスト設定（カバレッジ目標80%）
+- [x] T001 プロジェクトディレクトリ構造を作成（plan.md記載のフォルダ構造に従う）
+- [x] T002 [P] package.jsonを作成し依存パッケージを定義（pdfjs-dist@4.0.379, tesseract.js@5.1.0, pdf-lib@1.17.1, react@18.2.0）
+- [x] T003 [P] webpack.config.jsを作成しバンドル設定を記述（エントリーポイント: src/index.jsx、出力: dist/）
+- [x] T004 [P] babel.config.jsを作成しトランスパイル設定（ES6+ → ES5、React JSX対応）
+- [x] T005 [P] .eslintrc.jsonを作成しコード品質チェック設定
+- [x] T006 [P] .prettierrc.jsonを作成しコードフォーマット設定
+- [x] T007 [P] jest.config.jsを作成し単体テスト設定（カバレッジ目標80%）
 - [ ] T008 [P] cypress.config.jsを作成しE2Eテスト設定
-- [ ] T009 npm installを実行し全依存パッケージをインストール
-- [ ] T010 [P] public/index.htmlを作成（HTML5テンプレート、CSP meta tagを含む）
-- [ ] T011 [P] public/manifest.jsonを作成（PWA manifest）
+- [x] T009 npm installを実行し全依存パッケージをインストール
+- [x] T010 [P] public/index.htmlを作成（HTML5テンプレート、CSP meta tagを含む）
+- [x] T011 [P] public/manifest.jsonを作成（PWA manifest）
 - [ ] T012 [P] public/assets/wasm/ディレクトリを作成し、jpn.traineddataモデルを配置
 - [ ] T013 [P] public/assets/fonts/ディレクトリを作成し、HeiseiKakuGo-W5.ttfフォントを配置
-- [ ] T014 [P] src/styles/main.cssを作成（基本スタイル、レスポンシブ対応）
+- [x] T014 [P] src/styles/main.cssを作成（基本スタイル、レスポンシブ対応）
 
 ---
 
@@ -43,27 +43,27 @@
 
 ### Service層実装
 
-- [ ] T015 src/services/pdfProcessor.jsを作成しPDF.jsラッパーを実装（研究結果R001に基づく）
-- [ ] T016 src/services/pdfProcessor.jsにloadPDF(file)関数を実装（PDFファイル読み込み、ページ数取得）
-- [ ] T017 src/services/pdfProcessor.jsにrenderPageToImage(pdf, pageNumber, scale)関数を実装（300dpi変換、Canvas APIでImageData取得）
+- [x] T015 src/services/pdfProcessor.jsを作成しPDF.jsラッパーを実装（研究結果R001に基づく）
+- [x] T016 src/services/pdfProcessor.jsにloadPDF(file)関数を実装（PDFファイル読み込み、ページ数取得）
+- [x] T017 src/services/pdfProcessor.jsにrenderPageToImage(pdf, pageNumber, scale)関数を実装（300dpi変換、Canvas APIでImageData取得）
 - [ ] T018 tests/unit/pdfProcessor.test.jsを作成し、T015-T017のテストを実装
-- [ ] T019 src/services/ocrEngine.jsを作成しTesseract.jsラッパーを実装（研究結果R002に基づく）
-- [ ] T020 src/services/ocrEngine.jsにinitializeWorker()関数を実装（日本語モデル読み込み、Worker初期化）
-- [ ] T021 src/services/ocrEngine.jsにperformOCR(imageData, pageNumber)関数を実装（OCR実行、OCRResultオブジェクト返却）
-- [ ] T022 tests/unit/ocrEngine.test.jsを作成し、T019-T021のテストを実装
-- [ ] T023 src/services/pdfGenerator.jsを作成しpdf-libラッパーを実装（研究結果R003に基づく）
-- [ ] T024 src/services/pdfGenerator.jsにcreateTextLayer(ocrResult, pageWidth, pageHeight)関数を実装（座標変換、TextLayer生成）
-- [ ] T025 src/services/pdfGenerator.jsにaddTextLayerToPDF(originalPDF, textLayers)関数を実装（透明テキストレイヤー追加、検索可能PDF生成）
-- [ ] T026 tests/unit/pdfGenerator.test.jsを作成し、T023-T025のテストを実装
+- [x] T019 src/services/ocrEngine.jsを作成しTesseract.jsラッパーを実装（研究結果R002に基づく）
+- [x] T020 src/services/ocrEngine.jsにinitializeWorker()関数を実装（日本語モデル読み込み、Worker初期化）
+- [x] T021 src/services/ocrEngine.jsにperformOCR(imageData, pageNumber)関数を実装（OCR実行、OCRResultオブジェクト返却）
+- [x] T022 tests/unit/ocrEngine.test.jsを作成し、T019-T021のテストを実装
+- [x] T023 src/services/pdfGenerator.jsを作成しpdf-libラッパーを実装（研究結果R003に基づく）
+- [x] T024 src/services/pdfGenerator.jsにcreateTextLayer(ocrResult, pageWidth, pageHeight)関数を実装（座標変換、TextLayer生成）
+- [x] T025 src/services/pdfGenerator.jsにaddTextLayerToPDF(originalPDF, textLayers)関数を実装（透明テキストレイヤー追加、検索可能PDF生成）
+- [x] T026 tests/unit/pdfGenerator.test.jsを作成し、T023-T025のテストを実装
 
 ### Utility層実装
 
-- [ ] T027 [P] src/utils/fileValidator.jsを作成しファイル検証ロジックを実装（MIME type、サイズ、形式チェック）
-- [ ] T028 [P] src/utils/coordinateConverter.jsを作成し座標変換関数を実装（画像座標 → PDF座標、data-model.mdの変換ルールに従う）
-- [ ] T029 [P] src/utils/errorHandler.jsを作成しエラーハンドリングロジックを実装（OCRError, ValidationError定義）
-- [ ] T030 [P] tests/unit/fileValidator.test.jsを作成し、T027のテストを実装
-- [ ] T031 [P] tests/unit/coordinateConverter.test.jsを作成し、T028のテストを実装
-- [ ] T032 [P] tests/unit/errorHandler.test.jsを作成し、T029のテストを実装
+- [x] T027 [P] src/utils/fileValidator.jsを作成しファイル検証ロジックを実装（MIME type、サイズ、形式チェック）
+- [x] T028 [P] src/utils/coordinateConverter.jsを作成し座標変換関数を実装（画像座標 → PDF座標、data-model.mdの変換ルールに従う）
+- [x] T029 [P] src/utils/errorHandler.jsを作成しエラーハンドリングロジックを実装（OCRError, ValidationError定義）
+- [x] T030 [P] tests/unit/fileValidator.test.jsを作成し、T027のテストを実装
+- [x] T031 [P] tests/unit/coordinateConverter.test.jsを作成し、T028のテストを実装
+- [x] T032 [P] tests/unit/errorHandler.test.jsを作成し、T029のテストを実装
 
 ---
 
@@ -82,23 +82,23 @@
 
 ### Hook実装
 
-- [ ] T037 [US1] src/hooks/useFileUpload.jsを作成し、ファイル選択・検証ロジックを実装
-- [ ] T038 [US1] src/hooks/useOCR.jsを作成し、OCR処理状態管理（isProcessing, progress, results, error）を実装（research.md R004パターン適用）
+- [x] T037 [US1] src/hooks/useFileUpload.jsを作成し、ファイル選択・検証ロジックを実装
+- [x] T038 [US1] src/hooks/useOCR.jsを作成し、OCR処理状態管理（isProcessing, progress, results, error）を実装（research.md R004パターン適用）
 
 ### コンポーネント実装
 
-- [ ] T039 [US1] src/components/FileUploader.jsxを作成し、ファイル選択UIを実装
-- [ ] T040 [US1] src/components/FileUploader.jsxにドラッグ&ドロップ機能を実装
-- [ ] T041 [US1] src/components/FileUploader.jsxにファイル情報表示（名前、サイズ、ページ数）を実装
-- [ ] T042 [US1] src/components/OCRProgress.jsxを作成し、進捗バー表示を実装
-- [ ] T043 [US1] src/components/DownloadButton.jsxを作成し、ダウンロードボタンを実装（Blob URLを生成してダウンロード）
+- [x] T039 [US1] src/components/FileUploader.jsxを作成し、ファイル選択UIを実装
+- [x] T040 [US1] src/components/FileUploader.jsxにドラッグ&ドロップ機能を実装
+- [x] T041 [US1] src/components/FileUploader.jsxにファイル情報表示（名前、サイズ、ページ数）を実装
+- [x] T042 [US1] src/components/OCRProgress.jsxを作成し、進捗バー表示を実装
+- [x] T043 [US1] src/components/DownloadButton.jsxを作成し、ダウンロードボタンを実装（Blob URLを生成してダウンロード）
 
 ### App統合
 
-- [ ] T044 [US1] src/App.jsxを作成し、FileUploader, OCRProgress, DownloadButtonを統合
-- [ ] T045 [US1] src/App.jsxにOCRワークフローロジックを実装（useOCR hookを使用）
-- [ ] T046 [US1] src/index.jsxを作成し、Reactアプリケーションをマウント
-- [ ] T047 [US1] npm startを実行し、開発サーバーでUS1動作確認（1ページPDFテスト）
+- [x] T044 [US1] src/App.jsxを作成し、FileUploader, OCRProgress, DownloadButtonを統合
+- [x] T045 [US1] src/App.jsxにOCRワークフローロジックを実装（useOCR hookを使用）
+- [x] T046 [US1] src/index.jsxを作成し、Reactアプリケーションをマウント
+- [x] T047 [US1] npm startを実行し、開発サーバーでUS1動作確認（1ページPDFテスト）
 
 ### E2Eテスト
 
@@ -121,17 +121,17 @@
 
 ### バッチ処理実装
 
-- [ ] T053 [US2] src/hooks/useOCR.jsにバッチ処理ロジックを追加（4並列、research.md R002に基づく）
-- [ ] T054 [US2] src/hooks/useOCR.jsに進捗計算ロジックを追加（処理済みページ数 / 総ページ数 × 100）
+- [x] T053 [US2] src/hooks/useOCR.jsにバッチ処理ロジックを追加（4並列、research.md R002に基づく）
+- [x] T054 [US2] src/hooks/useOCR.jsに進捗計算ロジックを追加（処理済みページ数 / 総ページ数 × 100）
 
 ### コンポーネント更新
 
-- [ ] T055 [US2] src/components/OCRProgress.jsxに「ページ X/Y 処理中」のテキスト表示を追加
-- [ ] T056 [US2] src/components/OCRProgress.jsxに進捗バーのアニメーションを追加
+- [x] T055 [US2] src/components/OCRProgress.jsxに「ページ X/Y 処理中」のテキスト表示を追加
+- [x] T056 [US2] src/components/OCRProgress.jsxに進捗バーのアニメーションを追加
 
 ### 統合テスト
 
-- [ ] T057 [US2] npm startを実行し、10ページPDFでUS2動作確認
+- [x] T057 [US2] npm startを実行し、10ページPDFでUS2動作確認
 - [ ] T058 [US2] tests/e2e/uploadToDownload.cy.jsに複数ページPDFテストケースを追加
 - [ ] T059 [US2] npm run e2eを実行し、US2のE2Eテストがパスすることを確認
 
@@ -176,20 +176,20 @@
 
 ### 画像前処理実装
 
-- [ ] T071 [P] src/services/imageProcessor.jsを作成し、画像 → PDF変換ロジックを実装（pdf-lib使用）
-- [ ] T072 [P] src/services/imageProcessor.jsにconvertImageToPDF(imageFile)関数を実装（JPEG/PNG/TIFF対応）
-- [ ] T073 [P] src/services/imageProcessor.jsに画像解像度正規化関数を実装（300dpi基準）
+- [x] T071 [P] src/services/imageProcessor.jsを作成し、画像 → PDF変換ロジックを実装（pdf-lib使用）
+- [x] T072 [P] src/services/imageProcessor.jsにconvertImageToPDF(imageFile)関数を実装（JPEG/PNG/TIFF対応）
+- [x] T073 [P] src/services/imageProcessor.jsに画像解像度正規化関数を実装（300dpi基準）
 - [ ] T074 [P] tests/unit/imageProcessor.test.jsを作成し、T071-T073のテストを実装
 
 ### ファイル検証更新
 
-- [ ] T075 src/utils/fileValidator.jsを更新し、画像形式（image/jpeg, image/png, image/tiff）を対応MIMEタイプに追加
-- [ ] T076 tests/unit/fileValidator.test.jsを更新し、画像形式検証テストを追加
+- [x] T075 src/utils/fileValidator.jsを更新し、画像形式（image/jpeg, image/png, image/tiff）を対応MIMEタイプに追加
+- [x] T076 tests/unit/fileValidator.test.jsを更新し、画像形式検証テストを追加
 
 ### Hook更新
 
-- [ ] T077 src/hooks/useFileUpload.jsを更新し、画像ファイル選択時にPDF変換を自動実行
-- [ ] T078 src/App.jsxを更新し、画像 → PDF変換のフローを統合
+- [x] T077 src/hooks/useFileUpload.jsを更新し、画像ファイル選択時にPDF変換を自動実行
+- [x] T078 src/App.jsxを更新し、画像 → PDF変換のフローを統合
 
 ### テスト
 
