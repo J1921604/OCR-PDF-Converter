@@ -1,59 +1,59 @@
-#!/usr/bin/env pwsh
-# OCR-PDF Converter - ワンコマンド開発環境起動スクリプト
-# 使用方法: .\start-dev.ps1
+# OCR-PDF Converter - Development Server Startup Script
+# Usage: .\start-dev.ps1
 
 $ErrorActionPreference = 'Stop'
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " OCR-PDF Converter 開発環境起動中..." -ForegroundColor Cyan
+Write-Host " OCR-PDF Converter Starting..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 依存関係チェック
-Write-Host "[1/4] 依存関係を確認中..." -ForegroundColor Yellow
+# Check dependencies
+Write-Host "[1/3] Checking dependencies..." -ForegroundColor Yellow
 
 $nodeInstalled = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeInstalled) {
-    Write-Host "× Node.jsがインストールされていません。" -ForegroundColor Red
-    Write-Host "  https://nodejs.org/ からNode.js 18以上をインストールしてください。" -ForegroundColor Red
+    Write-Host "Error: Node.js is not installed." -ForegroundColor Red
+    Write-Host "Please install Node.js 18+ from https://nodejs.org/" -ForegroundColor Red
     exit 1
 }
 
 $nodeVersion = node --version
-Write-Host "✓ Node.js $nodeVersion が検出されました。" -ForegroundColor Green
+Write-Host "OK: Node.js $nodeVersion detected." -ForegroundColor Green
 
-# package.jsonの存在確認
+# Check package.json
 if (-not (Test-Path "package.json")) {
-    Write-Host "× package.jsonが見つかりません。プロジェクトルートで実行してください。" -ForegroundColor Red
+    Write-Host "Error: package.json not found." -ForegroundColor Red
+    Write-Host "Please run this script from the project root directory." -ForegroundColor Red
     exit 1
 }
 
-# 依存パッケージのインストール
+# Install dependencies if needed
 Write-Host ""
-Write-Host "[2/4] 依存パッケージをインストール中..." -ForegroundColor Yellow
+Write-Host "[2/3] Installing dependencies..." -ForegroundColor Yellow
 
 if (-not (Test-Path "node_modules")) {
-    Write-Host "  初回セットアップ: npm install を実行しています..." -ForegroundColor Gray
+    Write-Host "Running npm install..." -ForegroundColor Gray
     npm install
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "× npm install が失敗しました。" -ForegroundColor Red
+        Write-Host "Error: npm install failed." -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ 依存パッケージのインストールが完了しました。" -ForegroundColor Green
+    Write-Host "OK: Dependencies installed." -ForegroundColor Green
 } else {
-    Write-Host "✓ node_modules が存在します。スキップします。" -ForegroundColor Green
+    Write-Host "OK: node_modules exists. Skipping." -ForegroundColor Green
 }
 
-# 開発サーバー起動
+# Start development server
 Write-Host ""
-Write-Host "[3/4] 開発サーバーを起動中..." -ForegroundColor Yellow
+Write-Host "[3/3] Starting development server..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " ブラウザで http://localhost:3000 を開く" -ForegroundColor Green
+Write-Host " Open http://localhost:3000 in browser" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "サーバーを停止するには Ctrl+C を押してください" -ForegroundColor Gray
+Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Gray
 Write-Host ""
 
-# npm start を実行（バックグラウンドではなく前景で実行）
+# Run npm start
 npm start
