@@ -4,7 +4,7 @@
   "description": "スキャンPDFをOCR処理して検索可能PDFに変換するWebアプリケーション",
   "main": "src/index.jsx",
   "scripts": {
-    "start": "webpack serve --mode development",
+    "start": "webpack serve --mode development --no-open",
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
     "test": "jest",
