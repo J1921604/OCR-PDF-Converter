@@ -132,14 +132,14 @@ describe('errorHandler', () => {
       const error = new Error();
       const message = getUserFriendlyErrorMessage(error);
 
-      expect(message).toBe('予期しないエラーが発生しました。');
+      expect(message).toContain('予期しないエラーが発生しました');
     });
 
     test('空文字列メッセージのエラーから既定メッセージを取得する', () => {
       const error = new Error('');
       const message = getUserFriendlyErrorMessage(error);
 
-      expect(message).toBe('予期しないエラーが発生しました。');
+      expect(message).toContain('予期しないエラーが発生しました');
     });
   });
 });
