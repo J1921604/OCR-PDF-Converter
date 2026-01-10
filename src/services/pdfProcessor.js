@@ -1,8 +1,8 @@
 // PDF処理サービス（PDF.jsラッパー）
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Worker設定
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Worker設定 - CDNから読み込み
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 /**
  * PDFファイルを読み込み

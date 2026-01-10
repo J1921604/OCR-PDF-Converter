@@ -203,3 +203,22 @@ afterAll(() => {
   console.error = originalError;
   console.warn = originalWarn;
 });
+
+// pdfjs-dist mock
+jest.mock('pdfjs-dist', () => ({
+  __esModule: true,
+  default: {},
+  GlobalWorkerOptions: {
+    workerSrc: '',
+  },
+  getDocument: jest.fn(() => ({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: jest.fn(() => Promise.resolve({
+        getViewport: jest.fn(() => ({ width: 612, height: 792, scale: 1 })),
+        render: jest.fn(() => ({ promise: Promise.resolve() })),
+      })),
+    }),
+  })),
+  version: '4.0.379',
+}));

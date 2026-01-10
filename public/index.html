@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
-                   script-src 'self' 'wasm-unsafe-eval'; 
-                   worker-src 'self' blob:; 
+                   script-src 'self' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com; 
+                   worker-src 'self' blob: https://cdnjs.cloudflare.com; 
                    style-src 'self' 'unsafe-inline'; 
-                   img-src 'self' data: blob:;">
+                   img-src 'self' data: blob:;
+                   connect-src 'self' https://cdnjs.cloudflare.com;">
     <meta name="description" content="スキャンPDFをOCR処理して検索可能PDFに変換するWebアプリケーション">
     <title>OCR検索可能PDF変換</title>
     <link rel="manifest" href="/manifest.json">
