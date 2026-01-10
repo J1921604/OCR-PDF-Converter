@@ -1,12 +1,10 @@
 // PDF処理サービス（PDF.jsラッパー）
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Worker設定 - ローカル配信（CDN依存やCSP/拡張機能ブロックを回避）
-// GitHub Pagesのサブパス配信も想定し、document.baseURI基準で解決する
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdf.worker.min.mjs',
-  document.baseURI
-).toString();
+// Worker設定 - ローカル配信
+// CDNを使わず、ビルド時にコピーしたローカルのworkerファイルを使用する
+// webpack.config.jsのCopyWebpackPluginで 'pdf.worker.min.mjs' をルートに配置している前提
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 /**
  * PDFファイルを読み込み

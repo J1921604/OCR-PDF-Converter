@@ -73,5 +73,5 @@ export function getUserFriendlyErrorMessage(error) {
     return error.message;
   }
   
-  return '予期しないエラーが発生しました。';
+  return '予期しないエラーが発生しました: ' + JSON.stringify(error);
 }
