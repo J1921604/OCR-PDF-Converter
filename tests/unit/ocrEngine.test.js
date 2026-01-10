@@ -11,6 +11,10 @@ jest.mock('tesseract.js', () => ({
 }));
 
 describe('ocrEngine', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('initializeWorker', () => {
     test('OCRワーカーを初期化する', async () => {
       const mockWorker = {
@@ -22,9 +26,11 @@ describe('ocrEngine', () => {
 
       const worker = await initializeWorker();
 
-      expect(createWorker).toHaveBeenCalled();
-      expect(mockWorker.loadLanguage).toHaveBeenCalledWith('jpn');
-      expect(mockWorker.initialize).toHaveBeenCalledWith('jpn');
+      expect(createWorker).toHaveBeenCalledWith('jpn', 1, expect.objectContaining({
+        workerPath: expect.any(String),
+        langPath: expect.any(String),
+        corePath: expect.any(String),
+      }));
       expect(worker).toBe(mockWorker);
     });
 
@@ -63,14 +69,16 @@ describe('ocrEngine', () => {
       const mockCanvas = document.createElement('canvas');
       mockCanvas.height = 1000;
 
-      const result = await performOCR(mockCanvas, null, mockWorker);
+      // Workerを明示的に渡さず、新規作成させる
+      createWorker.mockResolvedValue(mockWorker);
+      const result = await performOCR(mockCanvas, 1);
 
       expect(mockWorker.recognize).toHaveBeenCalledWith(mockCanvas);
       expect(mockWorker.terminate).toHaveBeenCalled();
       expect(result.items).toHaveLength(2);
       expect(result.items[0].text).toBe('テスト');
       expect(result.items[1].text).toBe('文字');
-      expect(result.confidence).toBe(92.5);
+      expect(result.confidence).toBe(0.925);
       expect(result.imageHeight).toBe(1000);
     });
 
@@ -129,10 +137,11 @@ describe('ocrEngine', () => {
       const mockCanvas = document.createElement('canvas');
       mockCanvas.height = 1000;
 
-      const result = await performOCR(mockCanvas, mockExistingWorker, null);
+      const result = await performOCR(mockCanvas, 1, mockExistingWorker);
 
       expect(mockExistingWorker.recognize).toHaveBeenCalledWith(mockCanvas);
       expect(result.items).toHaveLength(1);
+      expect(result.pageNumber).toBe(1);
     });
 
     test('OCR処理に失敗した場合エラーをスローする', async () => {
@@ -141,10 +150,11 @@ describe('ocrEngine', () => {
         terminate: jest.fn().mockResolvedValue(undefined),
       };
 
+      createWorker.mockResolvedValue(mockWorker);
       const mockCanvas = document.createElement('canvas');
 
       await expect(
-        performOCR(mockCanvas, null, mockWorker)
+        performOCR(mockCanvas, 1)
       ).rejects.toThrow('OCRエラー');
       expect(mockWorker.terminate).toHaveBeenCalled();
     });

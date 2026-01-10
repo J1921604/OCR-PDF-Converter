@@ -43,8 +43,22 @@ module.exports = {
   devServer: {
     port: 3000,
     hot: true,
-    open: true,
+    open: false,
     historyApiFallback: true,
+    client: {
+      webSocketURL: {
+        hostname: 'localhost',
+        pathname: '/ws',
+        port: 3000,
+        protocol: 'ws',
+      },
+      logging: 'info',
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
+    },
+    allowedHosts: 'all',
   },
   performance: {
     maxAssetSize: 5242880, // 5MB

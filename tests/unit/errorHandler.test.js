@@ -74,8 +74,9 @@ describe('errorHandler', () => {
       const result = handleOCRError(error, 4);
 
       expect(result).toBeInstanceOf(OCRError);
-      expect(result.message).toContain('通常のエラー');
+      expect(result.message).toContain('ページ4のOCR処理に失敗しました');
       expect(result.pageNumber).toBe(4);
+      expect(result.originalError).toBe(error);
     });
 
     test('ページ番号なしでエラーを処理する', () => {

@@ -33,8 +33,9 @@ export function convertImageCoordsToPDF(imageBbox, imageHeight, pdfHeight, image
  */
 export function calculateFontSize(bbox, minFontSize = 6) {
   const height = typeof bbox === 'number' ? bbox : bbox?.height;
-  if (height === undefined || height === 0) return 0;
-  return Math.max(minFontSize, height);
+  if (height === undefined || height === null || isNaN(height)) return minFontSize;
+  if (height === 0) return minFontSize;
+  return Math.max(minFontSize, height * 0.9);
 }
 
 /**

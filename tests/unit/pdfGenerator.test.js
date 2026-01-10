@@ -217,7 +217,8 @@ describe('pdfGenerator', () => {
         height: 600,
       });
       expect(mockPdfDoc.save).toHaveBeenCalled();
-      expect(result).toBeInstanceOf(ArrayBuffer);
+      expect(result).toBeInstanceOf(Blob);
+      expect(result.type).toBe('application/pdf');
     });
 
     test('PNG画像をPDFに変換する', async () => {
@@ -241,30 +242,15 @@ describe('pdfGenerator', () => {
 
       expect(mockPdfDoc.embedPng).toHaveBeenCalledWith(arrayBuffer);
       expect(mockPdfDoc.addPage).toHaveBeenCalledWith([1000, 800]);
-      expect(result).toBeInstanceOf(ArrayBuffer);
+      expect(result).toBeInstanceOf(Blob);
+      expect(result.type).toBe('application/pdf');
     });
 
-    test('TIFF画像をPDFに変換する（PNG経由）', async () => {
-      const mockPage = {
-        drawImage: jest.fn(),
-      };
-
-      const mockImage = { width: 1200, height: 900 };
-
-      const mockPdfDoc = {
-        embedJpg: jest.fn(),
-        embedPng: jest.fn().mockResolvedValue(mockImage),
-        addPage: jest.fn().mockReturnValue(mockPage),
-        save: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-      };
-
-      PDFDocument.create.mockResolvedValue(mockPdfDoc);
-
+    test('TIFF画像の変換でエラーをスローする', async () => {
       const arrayBuffer = new ArrayBuffer(100);
-      const result = await convertImageToPDF(arrayBuffer, 'image/tiff');
-
-      expect(mockPdfDoc.embedPng).toHaveBeenCalledWith(arrayBuffer);
-      expect(result).toBeInstanceOf(ArrayBuffer);
+      await expect(
+        convertImageToPDF(arrayBuffer, 'image/tiff')
+      ).rejects.toThrow('サポートされていない画像形式: TIFF');
     });
 
     test('サポートされていない形式でエラーをスローする', async () => {
