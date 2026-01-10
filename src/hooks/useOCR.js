@@ -119,36 +119,3 @@ export function useOCR() {
     cancelProcessing,
   };
 }
-
-
-  const processPage = async (pdf, pageNumber) => {
-    // ページを画像に変換
-    const { canvas, imageData, width, height } = await renderPageToImage(pdf, pageNumber);
-
-    // ページサイズ取得（PDF座標系）
-    const pageSize = await getPageSize(pdf, pageNumber);
-
-    // OCR実行（Canvas要素を優先的に使用）
-    const ocrResult = await performOCR(canvas || imageData, pageNumber);
-
-    // テキストレイヤー生成
-    const textLayerItems = createTextLayer(ocrResult, pageSize.height);
-
-    return {
-      ocrResult,
-      textLayer: {
-        pageNumber,
-        items: textLayerItems,
-      },
-    };
-  };
-
-  return {
-    isProcessing,
-    progress,
-    ocrResults,
-    textLayers,
-    error,
-    processPages,
-  };
-}

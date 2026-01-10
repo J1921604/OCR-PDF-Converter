@@ -357,28 +357,28 @@ gantt
     excludes weekends 2025-12-27 2025-12-28 2025-12-29 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
     
     section Phase 1 Setup
-    T001-T014 Setup Tasks           :p1, 2026-01-15, 2d
+    T001-T014 Setup Tasks           :done, p1, 2026-01-15, 2d
     
     section Phase 2 Foundational
-    T015-T032 Foundational Tasks    :p2, after p1, 4d
+    T015-T032 Foundational Tasks    :done, p2, after p1, 4d
     
     section Phase 3 US1 MVP
-    T033-T050 US1 Tasks             :p3, after p2, 4d
+    T033-T050 US1 Tasks             :done, p3, after p2, 4d
     
     section Phase 4 US2
-    T051-T059 US2 Tasks             :p4, after p3, 4d
+    T051-T059 US2 Tasks             :done, p4, after p3, 4d
     
     section Phase 5 US3
     T060-T070 US3 Tasks             :p5, after p4, 4d
     
     section Phase 6 Image Support
-    T071-T080 Image Tasks           :p6, after p3, 3d
+    T071-T080 Image Tasks           :done, p6, after p3, 3d
     
     section Phase 7 Page Sizes
     T081-T088 Size Tasks            :p7, after p6, 4d
     
     section Phase 8 Polish
-    T089-T106 Polish Tasks          :p8, after p5, 3d
+    T089-T106 Polish Tasks          :active, p8, after p5, 3d
 ```
 
 **マイルストーン**:

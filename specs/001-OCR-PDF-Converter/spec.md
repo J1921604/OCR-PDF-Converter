@@ -1,9 +1,38 @@
 # 機能仕様: OCR検索可能PDF変換Webアプリ
 
 **機能ブランチ**: `001-OCR-PDF-Converter`  
-**作成日**: 2026-01-10  
-**ステータス**: 草案  
-**入力**: スキャンPDFをOCRして検索可能PDFに変換するGitHub Pagesアプリケーション
+**作成日**: 2026-01-15  
+**ステータス**: 実装完了（v1.0.0）  
+**入力**: スキャンPDFをOnnxOCRで高精度にOCR処理し、検索可能PDFに変換するWebアプリケーション
+
+## 技術スタック概要
+
+### バックエンド (Python 3.10.11)
+- **OnnxOCR 2025.5**: 高速CPU推論OCRエンジン（Tesseract.jsより2-3倍高速）
+- **pypdfium2 4.30**: PDFレンダリング
+- **pypdf 5.1**: PDF合成
+- **ReportLab 4.2**: 透明テキストレイヤー生成
+- **Flask 3.0**: REST APIサーバー
+
+### フロントエンド
+- **React 18.2**: UIフレームワーク
+- **Webpack 5.104**: モジュールバンドラー
+
+```mermaid
+flowchart LR
+    A[PDFアップロード<br/>React] --> B[POST /api/ocr/process<br/>Flask]
+    B --> C[pypdfium2<br/>PDF→画像変換]
+    C --> D[OnnxOCR<br/>日本語認識]
+    D --> E[ReportLab<br/>透明テキスト生成]
+    E --> F[pypdf<br/>PDF合成]
+    F --> G[GET /api/ocr/download<br/>検索可能PDF]
+    G --> H[React<br/>ダウンロード]
+    
+    style A fill:#61dafb
+    style B fill:#3776ab
+    style D fill:#ffd43b
+    style H fill:#d1ecf1
+```
 
 ## ユーザーシナリオ & テスト *(必須)*
 
@@ -25,23 +54,28 @@
 ```mermaid
 sequenceDiagram
     actor ユーザー
-    participant ブラウザ
-    participant OCRエンジン
-    participant PDFジェネレータ
+    participant React
+    participant Flask
+    participant OnnxOCR
+    participant ReportLab
 
-    ユーザー->>ブラウザ: PDFファイル選択
-    ブラウザ->>ブラウザ: ファイル検証（サイズ・形式）
-    ブラウザ-->>ユーザー: ファイル情報表示
-    ユーザー->>ブラウザ: OCR変換開始
-    ブラウザ->>OCRエンジン: PDF→画像変換
-    OCRエンジン->>OCRエンジン: OCR処理（日本語認識）
-    OCRエンジン-->>ブラウザ: テキスト + 座標情報
-    ブラウザ->>PDFジェネレータ: 透明テキストレイヤー生成
-    PDFジェネレータ->>PDFジェネレータ: 元PDF + オーバーレイPDF合成
-    PDFジェネレータ-->>ブラウザ: 検索可能PDF
-    ブラウザ-->>ユーザー: ダウンロードボタン表示
-    ユーザー->>ブラウザ: ダウンロード
-    ブラウザ-->>ユーザー: PDFファイル保存
+    ユーザー->>React: PDFファイル選択
+    React->>React: ファイル検証（サイズ・形式）
+    React-->>ユーザー: ファイル情報表示
+    ユーザー->>React: OCR変換開始
+    React->>Flask: POST /api/ocr/process
+    Flask->>Flask: pypdfium2でPDF→画像変換
+    Flask->>OnnxOCR: OCR実行（日本語認識）
+    OnnxOCR-->>Flask: テキスト + 座標情報
+    Flask->>ReportLab: 透明テキストレイヤー生成
+    ReportLab->>Flask: 透明PDF生成
+    Flask->>Flask: pypdfでPDF合成
+    Flask-->>React: 処理完了応答
+    React-->>ユーザー: ダウンロードボタン表示
+    ユーザー->>React: ダウンロード
+    React->>Flask: GET /api/ocr/download/{file_id}
+    Flask-->>React: 検索可能PDF
+    React-->>ユーザー: PDFファイル保存
 ```
 
 ---

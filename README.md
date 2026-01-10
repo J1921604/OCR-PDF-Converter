@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-success)](https://j1921604.github.io/OCR-PDF-Converter/)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/J1921604/OCR-PDF-Converter/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/J1921604/OCR-PDF-Converter/releases)
 
 **スキャンしたPDFをOnnxOCRで高精度にOCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
 
@@ -98,15 +98,6 @@ npm start
 
 2. **OCR変換開始**  
    「OCR変換開始」ボタンをクリックすると、Pythonバックエンドで高精度OCR処理が開始されます。  
-   進捗バーでリアルタイムに処理状況を確認できます。
-
-3. **検索可能PDFをダウンロード**  
-   処理完了後、「ダウンロード」ボタンから検索可能なPDFファイルを保存します。
-
-4. **テキスト検索**  
-   ダウンロードしたPDFをPDFビューアー（Adobe Acrobat Reader等）で開き、  
-   `Ctrl+F`（Windows）または `Cmd+F`（Mac）でテキスト検索が可能です。
-
 ```mermaid
 sequenceDiagram
     actor ユーザー
@@ -127,39 +118,68 @@ sequenceDiagram
     React->>Flask: GET /api/ocr/download
     Flask->>React: 検索可能PDF
     React->>ユーザー: ダウンロード
-    OCRエンジン->>アプリ: テキスト+座標
-    アプリ->>アプリ: PDF生成（テキストレイヤー追加）
-    アプリ->>ユーザー: ダウンロード
 ```
 
 ## 技術スタック
 
+### バックエンド (Python 3.10.11)
+
 | カテゴリ | ライブラリ | バージョン | 用途 |
 |----------|-----------|------------|------|
-| PDFレンダリング | [PDF.js](https://mozilla.github.io/pdf.js/) | 4.0+ | PDFページを画像化 |
-| OCRエンジン | [Tesseract.js](https://tesseract.projectnaptha.com/) | 5.0+ | 日本語OCR処理 |
-| PDF生成 | [pdf-lib](https://pdf-lib.js.org/) | 1.17+ | テキストレイヤー追加 |
-| UI | React | 18.0+ | ユーザーインターフェース |
+| OCRエンジン | [OnnxOCR](https://github.com/hiroi-sora/Umi-OCR) | 2025.5+ | 高速CPU推論OCR |
+| PDFレンダリング | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | 4.30+ | PDF→画像変換 |
+| PDF合成 | [pypdf](https://github.com/py-pdf/pypdf) | 5.1+ | PDFページ操作 |
+| テキストレイヤー | [ReportLab](https://www.reportlab.com/) | 4.2+ | 透明テキスト生成 |
+| Web API | [Flask](https://flask.palletsprojects.com/) | 3.0+ | REST APIサーバー |
+| 画像処理 | OpenCV + NumPy | 4.10+ | 前処理 |
+
+### フロントエンド
+
+| カテゴリ | ライブラリ | バージョン | 用途 |
+|----------|-----------|------------|------|
+| UIフレームワーク | [React](https://react.dev/) | 18.2+ | SPA構築 |
+| モジュールバンドラー | [Webpack](https://webpack.js.org/) | 5.104+ | ビルドツール |
+
+   進捗バーでリアルタイムに処理状況を確認できます。
+
+3. **検索可能PDFをダウンロード**  
+   処理完了後、「ダウンロード」ボタンから検索可能なPDFファイルを保存します。
+
+4. **テキスト検索**  
+   ダウンロードしたPDFをPDFビューアー（Adobe Acrobat Reader等）で開き、  
+   `Ctrl+F`（Windows）または `Cmd+F`（Mac）でテキスト検索が可能です。
 
 ## プロジェクト構造
 
 ```
 OCR-PDF-Converter/
+├── backend/                    # Pythonバックエンド
+│   ├── app.py                 # Flask APIサーバー
+│   ├── main.py                # OCRエンジン実装
+│   └── requirements.txt       # Python依存パッケージ
 ├── specs/                      # 仕様ドキュメント
 │   └── 001-OCR-PDF-Converter/
 │       ├── spec.md            # 機能仕様
 │       ├── requirements.md    # 技術要件
+│       ├── tasks.md           # タスクリスト
 │       └── checklists/        # 品質チェックリスト
-├── src/                        # ソースコード（実装予定）
-│   ├── components/            # Reactコンポーネント
-│   ├── services/              # ビジネスロジック
+├── src/                        # Reactフロントエンド
+│   ├── components/            # UIコンポーネント
+│   ├── hooks/                 # カスタムHook
+│   ├── services/              # API連携サービス
 │   └── utils/                 # ユーティリティ関数
 ├── public/                     # 静的ファイル
+├── cypress/                    # E2Eテスト
+│   └── e2e/
+│       └── ocr-converter.cy.js
+├── tests/                      # 単体テスト
+│   └── unit/
 ├── .github/                    # GitHub設定
-│   ├── workflows/             # CI/CDワークフロー
-│   └── prompts/               # 開発ガイド
-├── start-dev.ps1              # ワンコマンド起動スクリプト
-├── package.json               # 依存関係定義
+│   └── workflows/
+│       └── pages.yml          # GitHub Actionsデプロイ
+├── start-full.ps1             # ワンコマンド起動スクリプト
+├── start-backend.ps1          # バックエンド単独起動
+├── package.json               # npm依存関係
 └── README.md                  # このファイル
 ```
 
@@ -269,7 +289,7 @@ npm start
 - 別のPDFで試す
 - 暗号化を解除してから再試行
 
-### 4. OCR精度が低い
+### 3. OCR精度が低い
 
 **原因**:
 - スキャン解像度が低い（推奨: 300dpi以上）
@@ -277,39 +297,33 @@ npm start
 - 低品質なスキャン画像
 
 **解決方法**:
+- OnnxOCRは自動的に300dpiで処理します
 - 高解像度でスキャンし直す
-- 画像を事前に回転補正する
 - コントラストを高める
 
-### 5. ブラウザが対応していない
+## パフォーマンス指標
 
-**対応ブラウザ**:
-- Chrome 100+
-- Firefox 100+
-- Edge 100+
-- Safari 15+
-
-古いブラウザでは動作しない可能性があります。
+- **1ページPDF処理時間**: 5秒以内（P95、OnnxOCR CPU推論）
+- **10ページPDF処理時間**: 50秒以内（P95）
+- **メモリ使用量**: Python 512MB、React 256MB（ピーク時）
+- **ファイルサイズ制限**: 50MB
 
 ## よくある質問（FAQ）
 
-**Q1: アップロードしたファイルはサーバーに保存されますか？**  
-A: いいえ。全ての処理はブラウザ内で完結し、サーバーには送信されません。
+**Q1: バックエンドサーバーはどこで動作しますか？**  
+A: Pythonバックエンドはローカル環境（localhost:5000）で動作します。サーバーへのファイル送信は行われません。
 
 **Q2: 処理できるファイルサイズの上限は？**  
-A: 10MBまでです。大きいファイルは分割してください。
+A: 50MBまで対応しています。
 
 **Q3: 日本語以外の言語も対応していますか？**  
-A: 現在は日本語のみ対応しています。他の言語は今後のアップデートで対応予定です。
+A: OnnxOCRは多言語対応（日本語、英語、中国語）ですが、現在は日本語に最適化しています。
 
 **Q4: 商用利用は可能ですか？**  
 A: はい。MITライセンスで公開しているため、商用利用可能です。
 
 **Q5: オフラインで使用できますか？**  
-A: 初回アクセス時にOCRモデル（約50MB）をダウンロードするため、インターネット接続が必要です。その後はオフラインでも使用可能です（PWA対応予定）。
-- **10ページPDF処理時間**: 50秒以内（P95）
-- **メモリ使用量**: 2GB以下（ピーク時）
-- **ファイルサイズ制限**: 10MB
+A: Python環境とOnnxOCRモデルが事前にインストールされていれば、完全オフラインで使用可能です。
 
 ## ブラウザサポート
 
@@ -331,9 +345,11 @@ A: 初回アクセス時にOCRモデル（約50MB）をダウンロードする�
 ## 謝辞
 
 このプロジェクトは以下のオープンソースライブラリを使用しています：
-- [PDF.js](https://mozilla.github.io/pdf.js/) by Mozilla
-- [Tesseract.js](https://tesseract.projectnaptha.com/)
-- [pdf-lib](https://pdf-lib.js.org/)
+- [OnnxOCR](https://github.com/hiroi-sora/Umi-OCR) - 高速CPU推論OCRエンジン
+- [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) - PDFレンダリング
+- [pypdf](https://github.com/py-pdf/pypdf) - PDF操作
+- [ReportLab](https://www.reportlab.com/) - PDFテキストレイヤー生成
+- [React](https://react.dev/) - UIフレームワーク
 
 ## リンク
 

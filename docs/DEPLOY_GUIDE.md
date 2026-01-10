@@ -1,44 +1,89 @@
 # デプロイガイド
 
-このドキュメントでは、OCR検索可能PDF変換アプリケーションをGitHub Pagesにデプロイする方法を説明します。
+このドキュメントでは、OCR検索可能PDF変換アプリケーション（OnnxOCR + Python Backend）のローカルセットアップとGitHub Pagesデプロイ方法を説明します。
 
 ## 目次
 
 1. [前提条件](#前提条件)
-2. [GitHubリポジトリ設定](#gitHubリポジトリ設定)
-3. [GitHub Pages設定](#gitHub-pages設定)
+2. [ローカル環境セットアップ](#ローカル環境セットアップ)
+3. [GitHub Pages設定（フロントエンドのみ）](#gitHub-pages設定)
 4. [GitHub Actionsによる自動デプロイ](#gitHub-actionsによる自動デプロイ)
-5. [手動デプロイ](#手動デプロイ)
-6. [カスタムドメイン設定](#カスタムドメイン設定)
-7. [トラブルシューティング](#トラブルシューティング)
+5. [トラブルシューティング](#トラブルシューティング)
 
 ## 前提条件
 
+- **Python 3.10.11** インストール済み
+- **Node.js 18以上** インストール済み
+- **Git** インストール済み
 - GitHubアカウント
-- Node.js 18以上がインストールされていること
-- Gitがインストールされていること
-- プロジェクトがGitHubリポジトリにプッシュされていること
 
-## GitHubリポジトリ設定
+## ローカル環境セットアップ
 
-### 1. リポジトリの作成
+### 1. リポジトリのクローン
 
-1. GitHub ([https://github.com](https://github.com)) にログイン
-2. 右上の「+」アイコンから「New repository」を選択
-3. リポジトリ名を「OCR-PDF-Converter」に設定
-4. Public または Private を選択（GitHub Pages は Public リポジトリで無料）
-5. 「Create repository」をクリック
-
-### 2. ローカルリポジトリとの連携
-
-```bash
-# リモートリポジトリを追加
-git remote add origin https://github.com/YOUR_USERNAME/OCR-PDF-Converter.git
-
-# mainブランチにプッシュ
-git branch -M main
-git push -u origin main
+```powershell
+git clone https://github.com/J1921604/OCR-PDF-Converter.git
+cd OCR-PDF-Converter
 ```
+
+### 2. Python仮想環境のセットアップ
+
+```powershell
+# Python 3.10.11で仮想環境を作成
+py -3.10 -m venv .venv
+
+# 仮想環境をアクティベート（PowerShell）
+.\.venv\Scripts\Activate.ps1
+
+# 仮想環境をアクティベート（Bash）
+source .venv/Scripts/activate
+
+# Pythonパッケージをインストール
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+### 3. Node.jsパッケージのインストール
+
+```powershell
+npm install
+```
+
+### 4. アプリケーションの起動
+
+#### 方法1: ワンコマンド起動（推奨）
+
+```powershell
+.\start-full.ps1
+```
+
+このスクリプトは以下を自動実行します：
+- Python仮想環境のセットアップ
+- 依存パッケージのインストール
+- Pythonバックエンドの起動（localhost:5000）
+- Reactフロントエンドの起動（localhost:8080）
+
+#### 方法2: 個別起動
+
+**ターミナル1 - Pythonバックエンド:**
+```powershell
+.\.venv\Scripts\Activate.ps1
+python backend/app.py
+```
+
+**ターミナル2 - Reactフロントエンド:**
+```powershell
+npm start
+```
+
+### 5. アプリケーションへのアクセス
+
+ブラウザで以下のURLを開きます：
+```
+http://localhost:8080
+```
+
+バックエンドAPIは `http://localhost:5000` で動作します。
 
 ## GitHub Pages設定
 

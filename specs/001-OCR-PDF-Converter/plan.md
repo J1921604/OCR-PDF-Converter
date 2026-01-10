@@ -1,103 +1,112 @@
 # 実装計画: OCR検索可能PDF変換Webアプリ
 
-**ブランチ**: `001-OCR-PDF-Converter` | **日付**: 2026-01-10 | **仕様**: [spec.md](./spec.md)  
-**入力**: 機能仕様書 `/specs/001-OCR-PDF-Converter/spec.md` および技術要件書 `requirements.md`
+**ブランチ**: `001-OCR-PDF-Converter` | **日付**: 2026-01-15 | **仕様**: [spec.md](https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/spec.md)  
+**入力**: 機能仕様書 `specs/001-OCR-PDF-Converter/spec.md` および技術要件書 `requirements.md`
 
 ## 概要
 
-スキャンしたPDFファイルをブラウザ内でOCR処理し、検索可能なテキストレイヤーを追加する完全クライアントサイドWebアプリケーション。GitHub Pagesで静的ホスティングし、ユーザーのプライバシーを保護するため、全ての処理をブラウザ内で完結させる。
+スキャンしたPDFファイルをPythonバックエンド（OnnxOCR）で高精度OCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション。Reactフロントエンド + Flask APIサーバー構成。
 
 **主要要件**:
-- PDFアップロード → OCR処理（日本語対応） → 検索可能PDF生成
+- PDFアップロード → OCR処理（OnnxOCR、日本語高精度） → 検索可能PDF生成
 - 複数ページPDFのバッチ処理（進捗表示付き）
-- 完全クライアントサイド（サーバー送信なし）
+- Python 3.10.11 + 仮想環境(.venv)での実行
 
 **技術アプローチ**:
-- PDF.jsでPDF→画像変換
-- Tesseract.js（WebAssembly）でOCR処理
-- pdf-libでテキストレイヤー生成・PDF合成
+- pypdfium2でPDF→画像変換（バックエンド）
+- OnnxOCR 2025.5（ONNX Runtime CPU推論）で高速OCR処理
+- ReportLabで透明テキストレイヤー生成
+- pypdfでPDF合成
 - Reactでユーザーインターフェース構築
 
 ```mermaid
 flowchart LR
-    A[PDF<br/>アップロード] --> B[PDF.js<br/>画像変換]
-    B --> C[Tesseract.js<br/>OCR処理]
-    C --> D[pdf-lib<br/>PDF生成]
-    D --> E[検索可能PDF<br/>ダウンロード]
+    A[PDF<br/>アップロード<br/>React] --> B[Flask API<br/>POST /api/ocr/process]
+    B --> C[pypdfium2<br/>PDF→画像]
+    C --> D[OnnxOCR<br/>日本語認識]
+    D --> E[ReportLab<br/>透明テキスト]
+    E --> F[pypdf<br/>PDF合成]
+    F --> G[検索可能PDF<br/>GET /api/ocr/download]
+    G --> H[React<br/>ダウンロード]
     
-    style A fill:#e1f5ff
-    style B fill:#fff3cd
-    style C fill:#d4edda
-    style D fill:#f8d7da
-    style E fill:#d1ecf1
+    style A fill:#61dafb
+    style B fill:#3776ab
+    style D fill:#ffd43b
+    style H fill:#d1ecf1
 ```
 
 ## 技術コンテキスト
 
-**言語/バージョン**: JavaScript (ES6+), TypeScript (オプション)  
-**主要依存関係**: 
-- PDF.js 4.0+ (PDFレンダリング)
-- Tesseract.js 5.0+ (OCRエンジン)
-- pdf-lib 1.17+ (PDF生成)
-- React 18.0+ (UIフレームワーク)
+**バックエンド**: Python 3.10.11 (仮想環境 .venv)  
+**フロントエンド**: JavaScript (ES6+), React 18.2  
+**主要依存関係（Python）**: 
+- OnnxOCR 2025.5 (高速CPU推論OCRエンジン)
+- pypdfium2 4.30 (PDFレンダリング)
+- pypdf 5.1 (PDF操作)
+- ReportLab 4.2 (テキストレイヤー生成)
+- Flask 3.0 (REST APIサーバー)
+- ONNX Runtime 1.23 (推論エンジン)
 
-**ストレージ**: N/A（全てブラウザメモリ内処理、LocalStorageは設定保存のみ）  
-**テスト**: Jest 29.0+ (単体テスト), React Testing Library (統合テスト), Cypress (E2Eテスト)  
+**主要依存関係（JavaScript）**: 
+- React 18.2 (UIフレームワーク)
+- Webpack 5.104 (モジュールバンドラー)
+
+**ストレージ**: 一時ファイル（tempfile.gettempdir()）、処理完了後自動削除  
+**テスト**: pytest (バックエンド単体テスト), Cypress (E2Eテスト)  
 **ターゲットプラットフォーム**: 
 - Chrome 100+
 - Firefox 100+
 - Edge 100+
 - Safari 15+
 
-**プロジェクトタイプ**: 単一プロジェクト（Webアプリケーション）  
+**プロジェクトタイプ**: ハイブリッド（Pythonバックエンド + Reactフロントエンド）  
 **パフォーマンス目標**:
-- 1ページPDF (A4, 300dpi) OCR処理: 5秒以内 (P95)
+- 1ページPDF (A4, 300dpi) OCR処理: 5秒以内 (P95、OnnxOCR CPU推論)
 - 10ページPDF OCR処理: 50秒以内 (P95)
-- メモリ使用量: 2GB以下（ピーク時）
+- メモリ使用量: Python 512MB、React 256MB（ピーク時）
 
 **制約**:
-- ファイルサイズ上限: 10MB
-- クライアントサイド処理のみ（バックエンドAPI不可）
-- WebAssembly必須（Tesseract.js実行環境）
-- HTTPS必須（GitHub Pagesで自動提供）
+- ファイルサイズ上限: 50MB
+- Python 3.10.11必須
+- ONNX Runtime対応CPU必須
+- ローカル実行（localhost:5000 + localhost:8080）
 
 **規模/範囲**:
 - 対象ユーザー: 個人ユーザー、小規模チーム
-- 想定利用: 月間1,000ユーザー程度
+- 想定利用: ローカル環境での個人利用
 - 機能数: 3つのユーザーストーリー（P1: MVP、P2/P3: 拡張機能）
 
 ```mermaid
 flowchart TD
-    subgraph browser["ブラウザ環境"]
-        A[HTML5/CSS3/JS]
-        B[WebAssembly<br/>Tesseract Core]
-        C[Service Worker<br/>キャッシュ]
+    subgraph backend["Pythonバックエンド (localhost:5000)"]
+        A[Flask 3.0]
+        B[OnnxOCR 2025.5]
+        C[pypdfium2<br/>pypdf<br/>ReportLab]
+        D[ONNX Runtime<br/>CPU推論]
     end
     
-    subgraph libs["ライブラリ"]
-        D[PDF.js]
-        E[Tesseract.js]
-        F[pdf-lib]
-        G[React]
+    subgraph frontend["Reactフロントエンド (localhost:8080)"]
+        E[React 18.2]
+        F[Webpack Dev Server]
+        G[API Proxy<br/>/api → :5000]
     end
     
-    subgraph hosting["GitHub Pages"]
-        H[静的HTML]
-        I[バンドルJS]
-        J[WASMモデル]
+    subgraph env["実行環境"]
+        H[Python 3.10.11<br/>.venv]
+        I[Node.js]
     end
     
     H --> A
-    I --> A
-    J --> B
-    A --> D
-    A --> E
-    A --> F
-    A --> G
+    I --> F
+    F --> G
+    G --> A
+    A --> B
+    A --> C
+    B --> D
     
-    style browser fill:#e1f5ff
-    style libs fill:#fff3cd
-    style hosting fill:#d1ecf1
+    style backend fill:#3776ab,color:#fff
+    style frontend fill:#61dafb
+    style env fill:#ffd43b
 ```
 
 ## 憲法チェック

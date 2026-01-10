@@ -38,10 +38,11 @@ export function App() {
       setSearchablePDF(null);
       setGlobalError(null);
       if (isProcessing) {
+        console.log('[App] 処理中のためキャンセル実行');
         cancelProcessing();
       }
     }
-  }, [file, cancelProcessing]);
+  }, [file, isProcessing, cancelProcessing]);
 
   const handleOCRStart = async () => {
     if (!file) return;
