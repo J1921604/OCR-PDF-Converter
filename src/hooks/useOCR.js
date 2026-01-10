@@ -13,6 +13,7 @@ export function useOCR() {
   const [error, setError] = useState(null);
 
   const processPages = useCallback(async (file) => {
+    console.log('[useOCR] OCR処理開始:', file.name);
     setIsProcessing(true);
     setProgress(0);
     setOcrResults([]);
@@ -21,7 +22,9 @@ export function useOCR() {
 
     try {
       // PDFロード
+      console.log('[useOCR] PDFロード開始');
       const { pdf, pageCount } = await loadPDF(file);
+      console.log('[useOCR] PDFロード完了, ページ数:', pageCount);
 
       const results = [];
       const layers = [];
@@ -29,6 +32,7 @@ export function useOCR() {
 
       // バッチ処理（4並列）
       for (let i = 0; i < pageCount; i += batchSize) {
+        console.log(`[useOCR] バッチ処理 ${i + 1}-${Math.min(i + batchSize, pageCount)} / ${pageCount}`);
         const batch = [];
 
         for (let j = 0; j < batchSize && i + j < pageCount; j++) {
@@ -46,7 +50,9 @@ export function useOCR() {
 
         // 進捗更新
         const processed = Math.min(i + batchSize, pageCount);
-        setProgress((processed / pageCount) * 100);
+        const progressPercent = (processed / pageCount) * 100;
+        console.log(`[useOCR] 進捗: ${progressPercent.toFixed(1)}%`);
+        setProgress(progressPercent);
         setOcrResults([...results]);
         setTextLayers([...layers]);
       }

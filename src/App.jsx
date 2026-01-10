@@ -34,17 +34,23 @@ export function App() {
   const handleOCRStart = async () => {
     if (!file) return;
 
+    console.log('[App] OCR処理開始:', file.name);
     setGlobalError(null);
     setSearchablePDF(null);
 
     try {
       // OCR処理実行
+      console.log('[App] processPages 開始');
       const { textLayers: layers } = await processPages(file);
+      console.log('[App] processPages 完了, layers:', layers.length);
 
       // 検索可能PDF生成
+      console.log('[App] PDF生成開始');
       const pdfBlob = await addTextLayerToPDF(file, layers);
+      console.log('[App] PDF生成完了, size:', pdfBlob.size);
       setSearchablePDF(pdfBlob);
     } catch (error) {
+      console.error('[App] OCR処理エラー:', error);
       setGlobalError(error);
     }
   };

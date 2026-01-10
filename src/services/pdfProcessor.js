@@ -5,6 +5,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // CDNを使わず、ビルド時にコピーしたローカルのworkerファイルを使用する
 // webpack.config.jsのCopyWebpackPluginで 'pdf.worker.min.mjs' をルートに配置している前提
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+console.log('[pdfProcessor] Worker path set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
 /**
  * PDFファイルを読み込み
@@ -13,14 +14,18 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
  */
 export async function loadPDF(file) {
   try {
+    console.log('[pdfProcessor] Loading PDF:', file.name, 'Size:', file.size);
     const arrayBuffer = await file.arrayBuffer();
+    console.log('[pdfProcessor] ArrayBuffer created, size:', arrayBuffer.byteLength);
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    console.log('[pdfProcessor] PDF loaded successfully, pages:', pdf.numPages);
     
     return {
       pdf,
       pageCount: pdf.numPages,
     };
   } catch (error) {
+    console.error('[pdfProcessor] PDF loading failed:', error);
     throw new Error('PDFLoading failed: ' + error.message);
   }
 }
