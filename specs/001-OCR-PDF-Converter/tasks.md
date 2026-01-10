@@ -27,7 +27,7 @@
 - [x] T005 [P] .eslintrc.jsonを作成しコード品質チェック設定
 - [x] T006 [P] .prettierrc.jsonを作成しコードフォーマット設定
 - [x] T007 [P] jest.config.jsを作成し単体テスト設定（カバレッジ目標80%）
-- [ ] T008 [P] cypress.config.jsを作成しE2Eテスト設定
+- [x] T008 [P] cypress.config.jsを作成しE2Eテスト設定
 - [x] T009 npm installを実行し全依存パッケージをインストール
 - [x] T010 [P] public/index.htmlを作成（HTML5テンプレート、CSP meta tagを含む）
 - [x] T011 [P] public/manifest.jsonを作成（PWA manifest）
@@ -102,9 +102,9 @@
 
 ### E2Eテスト
 
-- [ ] T048 [US1] tests/e2e/uploadToDownload.cy.jsを作成
-- [ ] T049 [US1] tests/e2e/uploadToDownload.cy.jsに「PDFアップロード → OCR → ダウンロード」の完全E2Eテストを実装
-- [ ] T050 [US1] npm run e2eを実行し、US1のE2Eテストがパスすることを確認
+- [x] T048 [US1] tests/e2e/uploadToDownload.cy.jsを作成
+- [x] T049 [US1] tests/e2e/uploadToDownload.cy.jsに「PDFアップロード → OCR → ダウンロード」の完全E2Eテストを実装
+- [x] T050 [US1] npm run e2eを実行し、US1のE2Eテストがパスすることを確認
 
 ---
 
@@ -251,9 +251,9 @@
 
 ### ドキュメント更新
 
-- [ ] T099 [P] README.mdを更新（機能一覧、デモリンク、クイックスタート手順、技術スタック表）
-- [ ] T100 [P] docs/DEPLOY_GUIDE.mdを作成（GitHub Pagesデプロイ手順、GitHub Actions設定方法）
-- [ ] T101 [P] docs/完全仕様書.mdを作成（spec.md, requirements.md, plan.mdを統合した完全版）
+- [x] T099 [P] README.mdを更新（機能一覧、デモリンク、クイックスタート手順、技術スタック表）
+- [x] T100 [P] docs/DEPLOY_GUIDE.mdを作成（GitHub Pagesデプロイ手順、GitHub Actions設定方法）
+- [x] T101 [P] docs/完全仕様書.mdを作成（spec.md, requirements.md, plan.mdを統合した完全版）
 - [ ] T102 [P] CHANGELOG.mdを作成（バージョン1.0.0のリリースノート）
 
 ### 最終テスト
@@ -351,10 +351,10 @@ flowchart TD
 
 ```mermaid
 gantt
-    title 実装スケジュール
+    title 実装スケジュール（2026-1-15開始）
     dateFormat YYYY-MM-DD
     axisFormat %m/%d
-    excludes weekends 2025-12-27 2025-12-28 2025-12-29 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
+    excludes weekends
     
     section Phase 1 Setup
     T001-T014 Setup Tasks           :done, p1, 2026-01-15, 2d
@@ -382,14 +382,14 @@ gantt
 ```
 
 **マイルストーン**:
-- 2026-1-16: Phase 1完了（セットアップ）
-- 2026-1-20: Phase 2完了（基盤構築）
-- 2026-1-24: Phase 3完了（US1 MVP）✅ デプロイ可能
-- 2026-1-30: Phase 4完了（US2 複数ページ）
-- 2026-2-3: Phase 5完了（US3 プレビュー）
-- 2026-2-6: Phase 6完了（画像対応）
-- 2026-2-10: Phase 7完了（多様サイズ）
-- 2026-2-14: Phase 8完了（v1.0.0リリース）🎉
+- 開始+1日: Phase 1完了（セットアップ）
+- 開始+5日: Phase 2完了（基盤構築）
+- 開始+9日: Phase 3完了（US1 MVP）✅ デプロイ可能
+- 開始+13日: Phase 4完了（US2 複数ページ）
+- 開始+17日: Phase 5完了（US3 プレビュー）
+- 開始+12日: Phase 6完了（画像対応）
+- 開始+16日: Phase 7完了（多様サイズ）
+- 開始+20日: Phase 8完了（v1.0.0リリース）🎉
 
 ---
 

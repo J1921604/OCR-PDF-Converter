@@ -158,8 +158,8 @@ describe('OCR PDF Converter - Full Workflow', () => {
     cy.get('@fetch').should('have.been.calledWithMatch', /\/api\/ocr\/process$/);
     cy.get('@fetch').should('have.been.calledWithMatch', /\/api\/ocr\/download\//);
 
-    cy.get('[data-testid="ocr-progress"]').should('exist');
-    // Download button should become available
+    // OCR処理完了後、進捗は非表示になるのでダウンロードボタンの出現を確認
+    // （進捗表示は処理完了後に progress=100 && !isProcessing で非表示になる）
     cy.contains('ダウンロード', { timeout: 10000 }).should('be.visible');
   });
 
