@@ -35,7 +35,7 @@ export async function loadPDF(file) {
  * @param {Object} pdf - PDFドキュメント
  * @param {number} pageNumber - ページ番号（1始まり）
  * @param {number} dpi - 解像度（デフォルト: 300）
- * @returns {Promise<Object>} - { imageData, width, height }
+ * @returns {Promise<Object>} - { canvas, imageData, width, height }
  */
 export async function renderPageToImage(pdf, pageNumber, dpi = 300) {
   try {
@@ -57,7 +57,10 @@ export async function renderPageToImage(pdf, pageNumber, dpi = 300) {
     // ImageData取得
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     
+    console.log('[pdfProcessor] ページ', pageNumber, 'レンダリング完了: ', canvas.width, 'x', canvas.height);
+    
     return {
+      canvas,
       imageData,
       width: canvas.width,
       height: canvas.height,

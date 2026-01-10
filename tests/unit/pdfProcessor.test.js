@@ -73,6 +73,7 @@ describe('pdfProcessor', () => {
       expect(mockPage.getViewport).toHaveBeenCalled();
       expect(mockPage.render).toHaveBeenCalled();
       expect(result).toEqual({
+        canvas: mockCanvas,
         imageData: 'mock-image-data',
         width: 100,
         height: 200,

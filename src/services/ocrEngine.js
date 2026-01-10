@@ -26,12 +26,12 @@ export async function initializeWorker(lang = 'jpn') {
 
 /**
  * OCR処理を実行
- * @param {ImageData} imageData - 画像データ
+ * @param {HTMLCanvasElement|ImageData} imageSource - 画像データ（CanvasまたはImageData）
  * @param {number} pageNumber - ページ番号
  * @param {Worker} worker - Tesseract Worker（オプション）
  * @returns {Promise<Object>} - OCRResult { pageNumber, items, confidence }
  */
-export async function performOCR(imageData, pageNumber, worker = null) {
+export async function performOCR(imageSource, pageNumber, worker = null) {
   let localWorker = worker;
   let shouldTerminate = false;
   
@@ -42,8 +42,10 @@ export async function performOCR(imageData, pageNumber, worker = null) {
       shouldTerminate = true;
     }
     
-    // OCR実行
-    const { data } = await localWorker.recognize(imageData);
+    console.log('[ocrEngine] OCR処理開始 - ページ', pageNumber, 'Image type:', imageSource.constructor.name);
+    
+    // OCR実行（CanvasまたはImageDataを渡す）
+    const { data } = await localWorker.recognize(imageSource);
     
     // 結果フォーマット & フィルタリング
     const MIN_CONFIDENCE = 0.5; // 最小信頼度閾値
@@ -71,12 +73,16 @@ export async function performOCR(imageData, pageNumber, worker = null) {
         confidence: word.confidence / 100,
       }));
     
+    const imageHeight = imageSource.height || (imageSource.canvas && imageSource.canvas.height) || 0;
+    
     const ocrResult = {
       pageNumber,
       items: filteredWords,
       confidence: data.confidence / 100,
-      imageHeight: imageData.height,
+      imageHeight: imageHeight,
     };
+    
+    console.log('[ocrEngine] OCR完了 - ページ', pageNumber, '単語数:', filteredWords.length, '信頼度:', (data.confidence / 100).toFixed(2));
     
     return ocrResult;
   } catch (error) {
