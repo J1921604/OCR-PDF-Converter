@@ -60,23 +60,42 @@ export async function addTextLayerToPDF(originalPDF, textLayers) {
 
 /**
  * 画像ファイルをPDFに変換
- * @param {File} imageFile - 画像ファイル（JPEG/PNG/TIFF）
+ * @param {ArrayBuffer|File} imageData - 画像データ（ArrayBufferまたはFile）
+ * @param {string} [mimeType] - 画像のMIMEタイプ（imageDataがArrayBufferの場合に指定）
  * @returns {Promise<Blob>} - PDF Blob
  */
-export async function convertImageToPDF(imageFile) {
+export async function convertImageToPDF(imageData, mimeType) {
   try {
     const pdfDoc = await PDFDocument.create();
     
-    // 画像読み込み
-    const arrayBuffer = await imageFile.arrayBuffer();
+    // ArrayBufferとMIMEタイプの取得
+    let arrayBuffer;
+    let type;
+    
+    if (imageData instanceof File) {
+      arrayBuffer = await imageData.arrayBuffer();
+      type = imageData.type;
+    } else {
+      arrayBuffer = imageData;
+      type = mimeType;
+    }
+    
+    if (!type) {
+      throw new Error('MIME type is required when imageData is ArrayBuffer');
+    }
+    
+    // 画像埋め込み
     let image;
     
-    if (imageFile.type === 'image/jpeg') {
+    if (type === 'image/jpeg') {
       image = await pdfDoc.embedJpg(arrayBuffer);
-    } else if (imageFile.type === 'image/png') {
+    } else if (type === 'image/png') {
       image = await pdfDoc.embedPng(arrayBuffer);
+    } else if (type === 'image/tiff') {
+      // TIFFは直接サポートされていないため、PNGに変換済みと想定
+      throw new Error('サポートされていない画像形式: TIFF。PNGに変換してください。');
     } else {
-      throw new Error('Unsupported image format: ' + imageFile.type);
+      throw new Error('サポートされていない画像形式: ' + type);
     }
     
     // ページ作成（画像サイズに合わせる）

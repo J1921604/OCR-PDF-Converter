@@ -41,10 +41,22 @@ export async function performOCR(imageData, pageNumber, worker = null) {
     // OCR実行
     const { data } = await localWorker.recognize(imageData);
     
-    // 結果フォーマット
-    const ocrResult = {
-      pageNumber,
-      items: data.words.map(word => ({
+    // 結果フォーマット & フィルタリング
+    const MIN_CONFIDENCE = 0.5; // 最小信頼度閾値
+    
+    const filteredWords = data.words
+      .filter(word => {
+        // 空のテキストまたは空白のみのテキストを除外
+        if (!word.text || word.text.trim() === '') {
+          return false;
+        }
+        // 信頼度が閾値未満の単語を除外
+        if (word.confidence < MIN_CONFIDENCE * 100) {
+          return false;
+        }
+        return true;
+      })
+      .map(word => ({
         text: word.text,
         bbox: {
           x1: word.bbox.x0,
@@ -53,7 +65,11 @@ export async function performOCR(imageData, pageNumber, worker = null) {
           y2: word.bbox.y1,
         },
         confidence: word.confidence / 100,
-      })),
+      }));
+    
+    const ocrResult = {
+      pageNumber,
+      items: filteredWords,
       confidence: data.confidence / 100,
       imageHeight: imageData.height,
     };

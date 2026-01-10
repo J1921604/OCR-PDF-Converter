@@ -68,7 +68,7 @@ describe('pdfGenerator', () => {
       };
 
       const mockPdfDoc = {
-        getPages: jest.fn().mockReturnValue([mockPage]),
+        getPage: jest.fn().mockReturnValue(mockPage),
         embedFont: jest.fn().mockResolvedValue('mockFont'),
         save: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
       };
@@ -76,17 +76,20 @@ describe('pdfGenerator', () => {
       PDFDocument.load.mockResolvedValue(mockPdfDoc);
 
       const textLayers = [
-        [
-          {
-            text: 'テスト',
-            x: 10,
-            y: 20,
-            width: 50,
-            height: 20,
-            fontSize: 20,
-            confidence: 0.95,
-          },
-        ],
+        {
+          pageNumber: 1,
+          items: [
+            {
+              text: 'テスト',
+              x: 10,
+              y: 20,
+              width: 50,
+              height: 20,
+              fontSize: 20,
+              confidence: 0.95,
+            },
+          ],
+        },
       ];
 
       const arrayBuffer = new ArrayBuffer(100);
@@ -94,6 +97,7 @@ describe('pdfGenerator', () => {
 
       expect(PDFDocument.load).toHaveBeenCalledWith(arrayBuffer);
       expect(mockPdfDoc.embedFont).toHaveBeenCalledWith(StandardFonts.Helvetica);
+      expect(mockPdfDoc.getPage).toHaveBeenCalledWith(0); // pageNumber 1 -> index 0
       expect(mockPage.drawText).toHaveBeenCalledWith('テスト', {
         x: 10,
         y: 20,
@@ -108,19 +112,17 @@ describe('pdfGenerator', () => {
 
     test('複数ページのPDFにテキストレイヤーを追加する', async () => {
       const mockPage1 = {
-        getWidth: jest.fn().mockReturnValue(612),
-        getHeight: jest.fn().mockReturnValue(792),
         drawText: jest.fn(),
       };
 
       const mockPage2 = {
-        getWidth: jest.fn().mockReturnValue(612),
-        getHeight: jest.fn().mockReturnValue(792),
         drawText: jest.fn(),
       };
 
       const mockPdfDoc = {
-        getPages: jest.fn().mockReturnValue([mockPage1, mockPage2]),
+        getPage: jest.fn()
+          .mockReturnValueOnce(mockPage1)
+          .mockReturnValueOnce(mockPage2),
         embedFont: jest.fn().mockResolvedValue('mockFont'),
         save: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
       };
@@ -128,33 +130,42 @@ describe('pdfGenerator', () => {
       PDFDocument.load.mockResolvedValue(mockPdfDoc);
 
       const textLayers = [
-        [
-          {
-            text: 'ページ1',
-            x: 10,
-            y: 20,
-            width: 50,
-            height: 20,
-            fontSize: 20,
-            confidence: 0.95,
-          },
-        ],
-        [
-          {
-            text: 'ページ2',
-            x: 15,
-            y: 25,
-            width: 60,
-            height: 25,
-            fontSize: 25,
-            confidence: 0.9,
-          },
-        ],
+        {
+          pageNumber: 1,
+          items: [
+            {
+              text: 'ページ1',
+              x: 10,
+              y: 20,
+              width: 50,
+              height: 20,
+              fontSize: 20,
+              confidence: 0.95,
+            },
+          ],
+        },
+        {
+          pageNumber: 2,
+          items: [
+            {
+              text: 'ページ2',
+              x: 15,
+              y: 25,
+              width: 60,
+              height: 25,
+              fontSize: 25,
+              confidence: 0.9,
+            },
+          ],
+        },
       ];
 
       const arrayBuffer = new ArrayBuffer(100);
       await addTextLayerToPDF(arrayBuffer, textLayers);
 
+      expect(mockPdfDoc.getPage).toHaveBeenCalledTimes(2);
+      expect(mockPdfDoc.getPage).toHaveBeenNthCalledWith(1, 0); // page 1 -> index 0
+      expect(mockPdfDoc.getPage).toHaveBeenNthCalledWith(2, 1); // page 2 -> index 1
       expect(mockPage1.drawText).toHaveBeenCalledTimes(1);
       expect(mockPage2.drawText).toHaveBeenCalledTimes(1);
     });

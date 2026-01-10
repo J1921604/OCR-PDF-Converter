@@ -26,31 +26,27 @@ export class ValidationError extends Error {
 /**
  * OCRエラーをハンドリング
  * @param {Error} error - 元のエラー
- * @param {number} pageNumber - ページ番号
+ * @param {number} [pageNumber] - ページ番号
  * @returns {OCRError} - OCRエラー
  */
 export function handleOCRError(error, pageNumber) {
-  if (error.message.includes('timeout')) {
-    return new OCRError(
-      `ページ${pageNumber}のOCR処理がタイムアウトしました`,
-      pageNumber,
-      error
-    );
+  // 既にOCRErrorの場合はそのまま返す
+  if (error instanceof OCRError) {
+    return error;
   }
   
-  if (error.message.includes('out of memory')) {
-    return new OCRError(
-      'メモリ不足: ファイルサイズを小さくしてください',
-      pageNumber,
-      error
-    );
+  // OCRErrorに変換
+  let message = error.message || 'OCR処理に失敗しました';
+  
+  if (error.message && error.message.includes('timeout')) {
+    message = `ページ${pageNumber}のOCR処理がタイムアウトしました`;
+  } else if (error.message && error.message.includes('out of memory')) {
+    message = 'メモリ不足: ファイルサイズを小さくしてください';
+  } else if (pageNumber !== undefined) {
+    message = `ページ${pageNumber}のOCR処理に失敗しました`;
   }
   
-  return new OCRError(
-    `ページ${pageNumber}のOCR処理に失敗しました`,
-    pageNumber,
-    error
-  );
+  return new OCRError(message, pageNumber, error);
 }
 
 /**
@@ -64,12 +60,18 @@ export function getUserFriendlyErrorMessage(error) {
   }
   
   if (error instanceof OCRError) {
-    return error.message;
+    const prefix = error.pageNumber !== undefined ? `ページ${error.pageNumber}: ` : '';
+    return prefix + error.message;
   }
   
   if (error.name === 'PDFLoadError') {
     return 'PDFファイルが破損しています';
   }
   
-  return 'エラーが発生しました。再試行してください。';
+  // 通常のErrorの場合
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  
+  return '予期しないエラーが発生しました。';
 }
