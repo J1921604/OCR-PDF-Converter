@@ -720,14 +720,12 @@ Phase 6: 仕上げ
 
 ```mermaid
 flowchart LR
-    A[plan.md完成] --> B[Phase 0: research.md]
-    B --> C[Phase 1: data-model.md]
-    C --> D[Phase 1: quickstart.md]
-    D --> E[/speckit.tasks実行]
-    E --> F[tasks.md生成]
-    F --> G[実装開始]
-    
-    style A fill:#d4edda
+    A["plan.md完成"] --> B["Phase 0: research.md"]
+    B --> C["Phase 1: data-model.md"]
+    C --> D["Phase 1: quickstart.md"]
+    D --> E["speckit.tasks実行"]
+    E --> F["tasks.md生成"]
+    F --> G["実装開始"]
     style B fill:#fff3cd
     style C fill:#fff3cd
     style D fill:#fff3cd

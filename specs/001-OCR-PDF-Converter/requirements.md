@@ -21,15 +21,15 @@ GitHub Pages は **フロントエンドの静的ホスティングのみ**に�
 
 ```mermaid
 flowchart TD
-  U[ユーザー] --> FE[React フロントエンド]
-  FE -->|multipart/form-data| API[Flask API /api/ocr/process]
-  API --> OCR[onnxocr + 前処理]
-  OCR --> GEN[ReportLab で透明テキスト層]
-  GEN --> MERGE[pypdf で合成]
-  API -->|file_id| FE
-  FE -->|GET| DL[Flask /api/ocr/download/{file_id}]
+  U["ユーザー"] --> FE["React フロントエンド"]
+  FE -->|"multipart/form-data"| API["Flask API /api/ocr/process"]
+  API --> OCR["onnxocr + 前処理"]
+  OCR --> GEN["ReportLab で透明テキスト層"]
+  GEN --> MERGE["pypdf で合成"]
+  API -->|"file_id"| FE
+  FE -->|"GET"| DL["Flask /api/ocr/download/{file_id}"]
   DL --> FE
-  FE --> OUT[検索可能PDFをダウンロード]
+  FE --> OUT["検索可能PDFをダウンロード"]
 ```
 
 ### APIエンドポイント（現行実装）
