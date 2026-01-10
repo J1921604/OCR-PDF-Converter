@@ -8,7 +8,7 @@
 ## 技術スタック概要
 
 ### バックエンド (Python 3.10.11)
-- **OnnxOCR 2025.5**: 高速CPU推論OCRエンジン（Tesseract.jsより2-3倍高速）
+- **OnnxOCR 2025.5**: 高速CPU推論OCRエンジン（PaddleOCRベース）
 - **pypdfium2 4.30**: PDFレンダリング
 - **pypdf 5.1**: PDF合成
 - **ReportLab 4.2**: 透明テキストレイヤー生成

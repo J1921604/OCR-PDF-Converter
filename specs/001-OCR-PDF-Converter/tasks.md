@@ -21,7 +21,7 @@
 **目的**: プロジェクト初期化と開発環境構築
 
 - [x] T001 プロジェクトディレクトリ構造を作成（plan.md記載のフォルダ構造に従う）
-- [x] T002 [P] package.jsonを作成し依存パッケージを定義（pdfjs-dist@4.0.379, tesseract.js@5.1.0, pdf-lib@1.17.1, react@18.2.0）
+- [x] T002 [P] package.jsonを作成し依存パッケージを定義（pdfjs-dist@4.0.379, pdf-lib@1.17.1, react@18.2.0）
 - [x] T003 [P] webpack.config.jsを作成しバンドル設定を記述（エントリーポイント: src/index.jsx、出力: dist/）
 - [x] T004 [P] babel.config.jsを作成しトランスパイル設定（ES6+ → ES5、React JSX対応）
 - [x] T005 [P] .eslintrc.jsonを作成しコード品質チェック設定
@@ -47,7 +47,7 @@
 - [x] T016 src/services/pdfProcessor.jsにloadPDF(file)関数を実装（PDFファイル読み込み、ページ数取得）
 - [x] T017 src/services/pdfProcessor.jsにrenderPageToImage(pdf, pageNumber, scale)関数を実装（300dpi変換、Canvas APIでImageData取得）
 - [ ] T018 tests/unit/pdfProcessor.test.jsを作成し、T015-T017のテストを実装
-- [x] T019 src/services/ocrEngine.jsを作成しTesseract.jsラッパーを実装（研究結果R002に基づく）
+- [x] T019 src/services/ocrEngine.jsを作成しPythonバックエンドラッパーを実装（研究結果R002に基づく）
 - [x] T020 src/services/ocrEngine.jsにinitializeWorker()関数を実装（日本語モデル読み込み、Worker初期化）
 - [x] T021 src/services/ocrEngine.jsにperformOCR(imageData, pageNumber)関数を実装（OCR実行、OCRResultオブジェクト返却）
 - [x] T022 tests/unit/ocrEngine.test.jsを作成し、T019-T021のテストを実装
