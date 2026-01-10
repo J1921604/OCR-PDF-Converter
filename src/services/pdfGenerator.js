@@ -15,6 +15,19 @@ export function createTextLayer(ocrResult, pdfHeight) {
 }
 
 /**
+ * テキストからWinAnsiでエンコード不可能な文字を除去
+ * @param {string} text - 元のテキスト
+ * @returns {string} - エンコード可能な文字のみのテキスト
+ */
+function sanitizeTextForWinAnsi(text) {
+  // WinAnsiでエンコード可能な文字のみを残す（0x20-0x7E, 0xA0-0xFF）
+  return text.split('').filter(char => {
+    const code = char.charCodeAt(0);
+    return (code >= 0x20 && code <= 0x7E) || (code >= 0xA0 && code <= 0xFF);
+  }).join('');
+}
+
+/**
  * 元のPDFに透明テキストレイヤーを追加
  * @param {Blob|ArrayBuffer} originalPDF - 元のPDFファイル
  * @param {Array} textLayers - TextLayer配列 [{ pageNumber, items }]
@@ -32,23 +45,46 @@ export async function addTextLayerToPDF(originalPDF, textLayers) {
     // フォント登録（暫定: Helvetica、日本語フォントは外部から読み込み必要）
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     
+    console.log('[pdfGenerator] テキストレイヤー追加開始, ページ数:', textLayers.length);
+    
+    let totalItems = 0;
+    let skippedItems = 0;
+    
     // 各ページにテキストレイヤーを追加
     for (const textLayer of textLayers) {
       const pageIndex = textLayer.pageNumber - 1;
       const page = pdfDoc.getPage(pageIndex);
       
       for (const item of textLayer.items) {
-        // 透明テキスト描画
-        page.drawText(item.text, {
-          x: item.x,
-          y: item.y,
-          size: item.fontSize,
-          font: font,
-          color: rgb(0, 0, 0),
-          opacity: 0.0,  // 完全透明
-        });
+        totalItems++;
+        
+        // WinAnsiでエンコード不可能な文字を除去
+        const sanitizedText = sanitizeTextForWinAnsi(item.text);
+        
+        if (!sanitizedText || sanitizedText.trim() === '') {
+          skippedItems++;
+          continue; // エンコード不可能なテキストはスキップ
+        }
+        
+        try {
+          // 透明テキスト描画
+          page.drawText(sanitizedText, {
+            x: item.x,
+            y: item.y,
+            size: item.fontSize,
+            font: font,
+            color: rgb(0, 0, 0),
+            opacity: 0.0,  // 完全透明
+          });
+        } catch (err) {
+          // 個別のテキスト描画エラーはスキップ
+          console.warn('[pdfGenerator] テキスト描画スキップ:', sanitizedText, err.message);
+          skippedItems++;
+        }
       }
     }
+    
+    console.log('[pdfGenerator] テキストレイヤー追加完了, 総アイテム:', totalItems, 'スキップ:', skippedItems);
     
     // PDF出力
     const pdfBytes = await pdfDoc.save();

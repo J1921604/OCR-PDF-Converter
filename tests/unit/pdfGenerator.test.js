@@ -80,7 +80,7 @@ describe('pdfGenerator', () => {
           pageNumber: 1,
           items: [
             {
-              text: 'テスト',
+              text: 'Test ASCII',
               x: 10,
               y: 20,
               width: 50,
@@ -98,7 +98,7 @@ describe('pdfGenerator', () => {
       expect(PDFDocument.load).toHaveBeenCalledWith(arrayBuffer);
       expect(mockPdfDoc.embedFont).toHaveBeenCalledWith(StandardFonts.Helvetica);
       expect(mockPdfDoc.getPage).toHaveBeenCalledWith(0); // pageNumber 1 -> index 0
-      expect(mockPage.drawText).toHaveBeenCalledWith('テスト', {
+      expect(mockPage.drawText).toHaveBeenCalledWith('Test ASCII', {
         x: 10,
         y: 20,
         size: 20,
