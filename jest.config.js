@@ -15,6 +15,9 @@ module.exports = {
     'src/**/*.{js,jsx}',
     '!src/index.jsx',
     '!src/**/*.test.{js,jsx}',
+    '!src/**/*_backup.{js,jsx}',
+    '!src/App_backup.jsx',
+    '!src/hooks/useOCR_backup.js',
   ],
   coverageThreshold: {
     global: {

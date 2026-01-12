@@ -11,6 +11,11 @@ export function useFileUpload() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFileSelect = async (selectedFile) => {
+    // null/undefinedチェック
+    if (!selectedFile) {
+      return;
+    }
+
     console.log('[useFileUpload] ファイル選択:', selectedFile.name, 'Type:', selectedFile.type, 'Size:', selectedFile.size);
     setError(null);
     setIsLoading(true);
