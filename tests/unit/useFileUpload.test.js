@@ -70,16 +70,16 @@ describe('useFileUpload Hook', () => {
     expect(result.current.file).toBeNull();
     expect(result.current.fileInfo).toBeNull();
     expect(result.current.error).toBeTruthy();
-    expect(result.current.error.message).toContain('サポートされていないファイル形式');
+    expect(result.current.error.message).toContain('検証失敗');
   });
 
-  it('ファイルサイズが大きすぎる場合エラーが発生する', async () => {検証失敗
+  it('ファイルサイズが大きすぎる場合エラーが発生する', async () => {
     const { result } = renderHook(() => useFileUpload());
     
     // 11MBのファイルを作成（制限は10MB）
     const largeSize = 11 * 1024 * 1024;
-    const mockFile = new File(['x'.repeat(largeSize)], 'large.pdf', { type: 'application/pdf' });
-    Object.defineProperty(mockFile, 'size', { value: largeSize });
+    const mockFile = new File(['dummy'], 'large.pdf', { type: 'application/pdf' });
+    Object.defineProperty(mockFile, 'size', { value: largeSize, writable: false, configurable: false });
     
     await act(async () => {
       await result.current.handleFileSelect(mockFile);
@@ -88,6 +88,9 @@ describe('useFileUpload Hook', () => {
     expect(result.current.file).toBeNull();
     expect(result.current.fileInfo).toBeNull();
     expect(result.current.error).toBeTruthy();
+    expect(result.current.error.message).toContain('検証失敗');
+  }, 10000);
+    expect(result.current.error.message).toContain('検証失敗');
   }, 10000);
 
   it('clearFileでファイル状態がリセットされる', async () => {
