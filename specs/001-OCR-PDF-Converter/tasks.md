@@ -351,10 +351,10 @@ flowchart TD
 
 ```mermaid
 gantt
-    title 実装スケジュール（2026-1-15開始）
+    title 実装スケジュール
     dateFormat YYYY-MM-DD
     axisFormat %m/%d
-    excludes weekends
+    excludes weekends 2025-12-27 2025-12-28 2025-12-29 2025-12-30 2025-12-31 2026-01-01 2026-01-02 2026-01-03 2026-01-04
     
     section Phase 1 Setup
     T001-T014 Setup Tasks           :done, p1, 2026-01-15, 2d

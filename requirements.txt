@@ -4,6 +4,9 @@ pypdf==3.17.4
 pypdfium2==4.26.0
 reportlab==4.0.7
 onnxocr==2025.5
+surya-ocr==0.6.4
+paddleocr==2.9.4
+paddlepaddle==3.0.0b2
 Flask==3.0.0
 Flask-CORS==4.0.0
 Pillow==10.1.0

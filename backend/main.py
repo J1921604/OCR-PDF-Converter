@@ -1,6 +1,6 @@
 """
 OCR検索可能PDF変換 - メインスクリプト
-OnnxOCRを使用してスキャンPDFをOCR処理し、検索可能なPDFに変換します。
+OnnxOCR、Surya、PaddleOCRを使用してスキャンPDFをOCR処理し、検索可能なPDFに変換します。
 """
 import io
 import numpy as np
@@ -10,23 +10,81 @@ from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from PIL import Image
+
+# OnnxOCR
 from onnxocr.onnx_paddleocr import ONNXPaddleOcr
+
+# Surya OCR
+try:
+    from surya.ocr import run_ocr as surya_run_ocr
+    from surya.model.detection.model import load_model as load_det_model, load_processor as load_det_processor
+    from surya.model.recognition.model import load_model as load_rec_model
+    from surya.model.recognition.processor import load_processor as load_rec_processor
+    SURYA_AVAILABLE = True
+except ImportError:
+    SURYA_AVAILABLE = False
+    print("[WARNING] Surya OCR not available. Install with: pip install surya-ocr")
+
+# PaddleOCR
+try:
+    from paddleocr import PaddleOCR as PaddleOCREngine
+    PADDLEOCR_AVAILABLE = True
+except ImportError:
+    PADDLEOCR_AVAILABLE = False
+    print("[WARNING] PaddleOCR not available. Install with: pip install paddleocr paddlepaddle")
 
 # 日本語フォント登録
 pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
 
-# OCRエンジンの初期化（グローバルで1回だけ）
-ocr_engine = None
+# OCRエンジンのキャッシュ（グローバルで1回だけ初期化）
+ocr_engines = {
+    'onnxocr': None,
+    'surya': None,
+    'paddleocr': None
+}
 
 
-def get_ocr_engine():
-    """OCRエンジンのシングルトンを取得"""
-    global ocr_engine
-    if ocr_engine is None:
-        print("[OCR] OnnxOCRエンジンを初期化中...")
-        ocr_engine = ONNXPaddleOcr(use_gpu=False, lang="japan")
-        print("[OCR] OnnxOCRエンジン初期化完了")
-    return ocr_engine
+def get_ocr_engine(engine_name='onnxocr'):
+    """OCRエンジンのシングルトンを取得
+    
+    Args:
+        engine_name: 'onnxocr', 'surya', 'paddleocr'のいずれか
+    """
+    global ocr_engines
+    
+    if engine_name == 'onnxocr':
+        if ocr_engines['onnxocr'] is None:
+            print("[OCR] OnnxOCRエンジンを初期化中...")
+            ocr_engines['onnxocr'] = ONNXPaddleOcr(use_gpu=False, lang="japan")
+            print("[OCR] OnnxOCRエンジン初期化完了")
+        return ocr_engines['onnxocr']
+    
+    elif engine_name == 'surya' and SURYA_AVAILABLE:
+        if ocr_engines['surya'] is None:
+            print("[OCR] Suryaエンジンを初期化中...")
+            det_model = load_det_model()
+            det_processor = load_det_processor()
+            rec_model = load_rec_model()
+            rec_processor = load_rec_processor()
+            ocr_engines['surya'] = {
+                'det_model': det_model,
+                'det_processor': det_processor,
+                'rec_model': rec_model,
+                'rec_processor': rec_processor
+            }
+            print("[OCR] Suryaエンジン初期化完了")
+        return ocr_engines['surya']
+    
+    elif engine_name == 'paddleocr' and PADDLEOCR_AVAILABLE:
+        if ocr_engines['paddleocr'] is None:
+            print("[OCR] PaddleOCRエンジンを初期化中...")
+            ocr_engines['paddleocr'] = PaddleOCREngine(use_angle_cls=True, lang='japan', use_gpu=False)
+            print("[OCR] PaddleOCRエンジン初期化完了")
+        return ocr_engines['paddleocr']
+    
+    else:
+        raise ValueError(f"Unsupported or unavailable OCR engine: {engine_name}")
 
 
 def render_pdf_to_image(pdf_path, page_number, dpi=300):
@@ -66,46 +124,89 @@ def render_pdf_to_image(pdf_path, page_number, dpi=300):
             pass
 
 
-def run_ocr(pil_img):
+def run_ocr(pil_img, engine_name='onnxocr'):
     """
     OCRの実行
     
     Args:
         pil_img: PIL Image
+        engine_name: 'onnxocr', 'surya', 'paddleocr'のいずれか
         
     Returns:
-        OCR結果のリスト
+        OCR結果のリスト（標準形式に正規化済み）
     """
     try:
-        # PIL ImageをOpenCV形式に変換
-        rgb = np.array(pil_img)
-        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        if engine_name == 'onnxocr':
+            # PIL ImageをOpenCV形式に変換
+            rgb = np.array(pil_img)
+            bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
 
-        # ---- OCR前処理（精度・安定性向上） ----
-        # 目的: ノイズ低減/コントラスト強調により、文字の検出漏れや誤認識を抑える
-        try:
-            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-            gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
-            thr = cv2.adaptiveThreshold(
-                gray,
-                255,
-                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY,
-                31,
-                10,
+            # ---- OCR前処理（精度・安定性向上） ----
+            try:
+                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+                gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+                thr = cv2.adaptiveThreshold(
+                    gray,
+                    255,
+                    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                    cv2.THRESH_BINARY,
+                    31,
+                    10,
+                )
+                bgr = cv2.cvtColor(thr, cv2.COLOR_GRAY2BGR)
+            except Exception as e:
+                print(f"[WARN] 前処理スキップ: {e}")
+            
+            # OCR実行
+            ocr = get_ocr_engine('onnxocr')
+            results = ocr.ocr(bgr)
+            return results
+        
+        elif engine_name == 'surya' and SURYA_AVAILABLE:
+            # Surya OCR実行
+            engine = get_ocr_engine('surya')
+            images = [pil_img]
+            
+            predictions = surya_run_ocr(
+                images,
+                [engine['det_model']] * len(images),
+                [engine['det_processor']] * len(images),
+                [engine['rec_model']] * len(images),
+                [engine['rec_processor']] * len(images)
             )
-            bgr = cv2.cvtColor(thr, cv2.COLOR_GRAY2BGR)
-        except Exception as e:
-            # 前処理が失敗してもOCR自体は続行
-            print(f"[WARN] 前処理スキップ: {e}")
+            
+            # Surya結果を標準形式に変換
+            if predictions and len(predictions) > 0:
+                pred = predictions[0]
+                results = [[]]
+                for text_line in pred.text_lines:
+                    # Suryaの座標を4点形式に変換
+                    bbox = text_line.bbox
+                    quad = [
+                        [bbox[0], bbox[1]],  # 左上
+                        [bbox[2], bbox[1]],  # 右上
+                        [bbox[2], bbox[3]],  # 右下
+                        [bbox[0], bbox[3]]   # 左下
+                    ]
+                    results[0].append([
+                        quad,
+                        [text_line.text, text_line.confidence if hasattr(text_line, 'confidence') else 0.9]
+                    ])
+                return results
+            return [[]]
         
-        # OCR実行
-        ocr = get_ocr_engine()
-        results = ocr.ocr(bgr)
+        elif engine_name == 'paddleocr' and PADDLEOCR_AVAILABLE:
+            # PaddleOCR実行
+            ocr = get_ocr_engine('paddleocr')
+            rgb = np.array(pil_img)
+            results = ocr.ocr(rgb, cls=True)
+            return results
         
-        return results
+        else:
+            raise ValueError(f"Unsupported or unavailable OCR engine: {engine_name}")
+        
     except Exception as e:
-        raise Exception(f"OCR処理失敗: {str(e)}")
+        raise Exception(f"OCR処理失敗 ({engine_name}): {str(e)}")
 
 
 def normalize_ocr_results(ocr_results, confidence_threshold=0.5):
@@ -230,9 +331,10 @@ def merge_overlay(original_pdf_path, overlay_bytes_list, output_pdf_path):
         raise Exception(f"PDF合成失敗: {str(e)}")
 
 
-def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0.5, progress_callback=None):
+def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0.5, progress_callback=None, ocr_engines=['onnxocr', 'surya', 'paddleocr']):
     """
     PDFを処理して検索可能PDFに変換する（メイン処理）
+    複数のOCRエンジンを使用し、精度比較を行う
     
     Args:
         input_pdf_path: 入力PDFファイルパス
@@ -240,6 +342,7 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
         dpi: OCR用の画像解像度
         confidence_threshold: OCR信頼度の閾値
         progress_callback: 進捗コールバック関数 callback(current, total, message)
+        ocr_engines: 使用するOCRエンジンのリスト（デフォルト: 全エンジン）
     """
     pdf = None
     try:
@@ -254,6 +357,7 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
             reader_for_size = PdfReader(io.BytesIO(f.read()))
         
         overlay_list = []
+        all_engine_results = []  # 全ページの各エンジン結果を保存
         
         for page_num in range(page_count):
             try:
@@ -275,23 +379,64 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
                 scale_x = page_w_pt / float(img_width)
                 scale_y = page_h_pt / float(img_height)
                 
-                # 2. OCRの実行
-                ocr_results = run_ocr(pil_img)
-                print(f"  → OCR実行完了")
+                # 2. 複数のOCRエンジンで実行し、精度を比較
+                best_ocr_items = None
+                best_confidence = 0.0
+                best_engine = None
+                engine_results = {}
                 
-                # 3. OCR結果を正規化
-                ocr_items = normalize_ocr_results(ocr_results, confidence_threshold)
-                print(f"  → OCR結果正規化完了: {len(ocr_items)}個のテキスト検出")
+                for engine_name in ocr_engines:
+                    # エンジンが利用可能かチェック
+                    if engine_name == 'surya' and not SURYA_AVAILABLE:
+                        continue
+                    if engine_name == 'paddleocr' and not PADDLEOCR_AVAILABLE:
+                        continue
+                    
+                    try:
+                        print(f"  → {engine_name} OCR実行中...")
+                        ocr_results = run_ocr(pil_img, engine_name)
+                        ocr_items = normalize_ocr_results(ocr_results, confidence_threshold)
+                        
+                        # 平均信頼度を計算
+                        if ocr_items:
+                            avg_confidence = sum(item['confidence'] for item in ocr_items) / len(ocr_items)
+                            engine_results[engine_name] = {
+                                'items': ocr_items,
+                                'confidence': avg_confidence,
+                                'count': len(ocr_items)
+                            }
+                            print(f"    ✓ {len(ocr_items)}個のテキスト検出 (平均信頼度: {avg_confidence:.2%})")
+                            
+                            # 最も信頼度の高いエンジンを選択
+                            if avg_confidence > best_confidence:
+                                best_confidence = avg_confidence
+                                best_ocr_items = ocr_items
+                                best_engine = engine_name
+                        else:
+                            print(f"    ✗ テキストが検出されませんでした")
+                    except Exception as e:
+                        print(f"    ✗ {engine_name} エラー: {e}")
+                        continue
                 
-                # 4. 透明テキストレイヤーPDFを作成
-                if ocr_items:
-                    overlay_bytes = create_overlay_pdf(page_w_pt, page_h_pt, ocr_items, scale_x=scale_x, scale_y=scale_y)
+                # 最良のOCR結果を表示
+                if best_engine:
+                    print(f"  → 最良エンジン: {best_engine} (信頼度: {best_confidence:.2%})")
+                
+                # 3. 透明テキストレイヤーPDFを作成
+                if best_ocr_items:
+                    overlay_bytes = create_overlay_pdf(page_w_pt, page_h_pt, best_ocr_items, scale_x=scale_x, scale_y=scale_y)
                     print(f"  → オーバーレイPDF作成完了")
                 else:
                     overlay_bytes = None
                     print(f"  → テキストが検出されませんでした")
                 
                 overlay_list.append(overlay_bytes)
+                all_engine_results.append({
+                    'page': page_num + 1,
+                    'engine_results': engine_results,
+                    'best_engine': best_engine,
+                    'best_confidence': best_confidence
+                })
                 
             except Exception as e:
                 print(f"[エラー] ページ {page_num + 1} の処理でエラー: {e}")
@@ -307,10 +452,34 @@ def process_pdf(input_pdf_path, output_pdf_path, dpi=300, confidence_threshold=0
         if progress_callback:
             progress_callback(page_count, page_count, "完了")
         
+        # エンジン精度の集計
+        accuracy_summary = {}
+        for engine_name in ocr_engines:
+            if engine_name == 'surya' and not SURYA_AVAILABLE:
+                continue
+            if engine_name == 'paddleocr' and not PADDLEOCR_AVAILABLE:
+                continue
+            
+            confidences = []
+            counts = []
+            for page_result in all_engine_results:
+                if engine_name in page_result['engine_results']:
+                    confidences.append(page_result['engine_results'][engine_name]['confidence'])
+                    counts.append(page_result['engine_results'][engine_name]['count'])
+            
+            if confidences:
+                accuracy_summary[engine_name] = {
+                    'avg_confidence': sum(confidences) / len(confidences),
+                    'total_text_count': sum(counts),
+                    'pages_processed': len(confidences)
+                }
+        
         return {
             "success": True,
             "output_path": output_pdf_path,
             "pages_processed": page_count,
+            "accuracy_summary": accuracy_summary,
+            "page_details": all_engine_results
         }
         
     except Exception as e:

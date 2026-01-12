@@ -4,42 +4,54 @@
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-success)](https://j1921604.github.io/OCR-PDF-Converter/)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/J1921604/OCR-PDF-Converter/releases)
 
-**スキャンしたPDFをOnnxOCRで高精度にOCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
+**スキャンしたPDFや画像を複数のOCRエンジン（OnnxOCR、Surya、PaddleOCR）で高精度にOCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
 
 ## 特徴
 
-✅ **OnnxOCR採用** - CPU推論で高速かつ高精度なOCR処理  
+✅ **複数OCRエンジン対応** - OnnxOCR、Surya、PaddleOCRから最適なエンジンを自動選択  
+✅ **精度比較表示** - 各エンジンの認識精度をリアルタイム表示  
+✅ **画像ファイル対応** - JPEG、PNG、TIFF画像も直接OCR処理可能  
 ✅ **Python + Reactハイブリッド** - バックエンドでPython、フロントエンドでReact  
-✅ **日本語OCR最適化** - PaddleOCRベースの日本語特化モデル  
-✅ **高精度テキスト抽出** - Tesseract.jsより2-3倍高速で精度も向上  
+✅ **日本語OCR最適化** - 日本語に特化した高精度認識  
 ✅ **複数ページ対応** - バッチ処理でリアルタイム進捗表示  
 ✅ **ファイル制限** - フロント側は 10MB まで（バックエンド受信上限は 50MB だが運用上は 10MB）  
 ✅ **透明テキストレイヤー** - ReportLabで完全透明なテキストレイヤーを合成  
+✅ **ダークモードUI** - 黒とオレンジを基調とした立体的で金属的なデザイン  
 
 ```mermaid
 flowchart LR
-    A[PDFアップロード<br/>React] --> B[PythonバックエンドAPI]
+    A[PDF/画像<br/>アップロード<br/>React] --> B[PythonバックエンドAPI]
     B --> C[pypdfium2で<br/>画像変換]
-    C --> D[OnnxOCR<br/>日本語認識]
-    D --> E[ReportLab<br/>透明テキスト生成]
-    E --> F[pypdf合成]
-    F --> G[検索可能PDF<br/>ダウンロード]
+    C --> D1[OnnxOCR<br/>日本語認識]
+    C --> D2[Surya OCR<br/>多言語認識]
+    C --> D3[PaddleOCR<br/>高精度認識]
+    D1 --> E[精度比較<br/>最良エンジン選択]
+    D2 --> E
+    D3 --> E
+    E --> F[ReportLab<br/>透明テキスト生成]
+    F --> G[pypdf合成]
+    G --> H[検索可能PDF<br/>ダウンロード]
     
     style A fill:#61dafb
     style B fill:#3776ab
-    style D fill:#ffd43b
-    style G fill:#d1ecf1
+    style D1 fill:#ffd43b
+    style D2 fill:#ff8c37
+    style D3 fill:#ff6b00
+    style H fill:#d1ecf1
 ```
 
 ## 技術スタック
 
 ### バックエンド (Python 3.10.11)
-- **OnnxOCR**: 高速CPU推論OCRエンジン
+- **OnnxOCR 2025.5**: 高速CPU推論OCRエンジン（PaddleOCRベース）
+- **Surya OCR 0.6.4**: GPU/CPU対応の最新OCRエンジン
+- **PaddleOCR 2.9.4**: 多機能高精度OCRエンジン
 - **pypdfium2**: PDFレンダリング
 - **pypdf**: PDF合成
 - **ReportLab**: 透明テキストレイヤー生成
 - **Flask**: REST APIサーバー
 - **OpenCV + NumPy**: 画像前処理
+- **Pillow**: 画像処理
 
 ### フロントエンド
 - **React 18**: UIフレームワーク
@@ -97,11 +109,14 @@ npm start
 ## 使い方
 
 1. **ファイルを選択**  
-   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイル（10MB以下）を選択します。  
+   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイルまたは画像ファイル（JPEG、PNG、TIFF、10MB以下）を選択します。  
    **対応形式**: PDF / JPEG / PNG / TIFF（画像はフロント側でPDFに変換してから送信します）
 
 2. **OCR変換開始**  
-   「OCR変換開始」ボタンをクリックすると、Pythonバックエンドで高精度OCR処理が開始されます。  
+   「OCR変換開始」ボタンをクリックすると、Pythonバックエンドで以下の処理が実行されます：
+   - 複数のOCRエンジン（OnnxOCR、Surya、PaddleOCR）で並列処理
+   - 各エンジンの認識精度をリアルタイム比較
+   - 最も精度の高いエンジンの結果を採用  
 ```mermaid
 sequenceDiagram
     actor ユーザー
@@ -131,11 +146,14 @@ sequenceDiagram
 | カテゴリ | ライブラリ | バージョン | 用途 |
 |----------|-----------|------------|------|
 | OCRエンジン | [OnnxOCR](https://github.com/hiroi-sora/Umi-OCR) | 2025.5+ | 高速CPU推論OCR |
-| PDFレンダリング | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | 4.30+ | PDF→画像変換 |
-| PDF合成 | [pypdf](https://github.com/py-pdf/pypdf) | 5.1+ | PDFページ操作 |
-| テキストレイヤー | [ReportLab](https://www.reportlab.com/) | 4.2+ | 透明テキスト生成 |
+| OCRエンジン | [Surya OCR](https://github.com/VikParuchuri/surya) | 0.6.4+ | GPU/CPU多言語OCR |
+| OCRエンジン | [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) | 2.9.4+ | 高精度多機能OCR |
+| PDFレンダリング | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | 4.26+ | PDF→画像変換 |
+| PDF合成 | [pypdf](https://github.com/py-pdf/pypdf) | 3.17+ | PDFページ操作 |
+| テキストレイヤー | [ReportLab](https://www.reportlab.com/) | 4.0+ | 透明テキスト生成 |
 | Web API | [Flask](https://flask.palletsprojects.com/) | 3.0+ | REST APIサーバー |
-| 画像処理 | OpenCV + NumPy | 4.10+ | 前処理 |
+| 画像処理 | OpenCV + NumPy | 4.8+ / 1.24+ | 前処理 |
+| 画像処理 | Pillow | 10.1+ | 画像読み込み・変換 |
 
 ### フロントエンド
 
