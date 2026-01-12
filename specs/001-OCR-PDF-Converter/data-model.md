@@ -380,7 +380,7 @@ flowchart TD
     A[ユーザー<br/>PDFアップロード] --> B[PDFFile作成]
     B --> C[バリデーション]
     C --> D[PDFPage生成<br/>PDF.js使用]
-    D --> E[OCR処理<br/>Tesseract.js使用]
+    D --> E[OCR処理<br/>Flask API経由<br/>OnnxOCR/PaddleOCR]
     E --> F[OCRResult生成]
     F --> G[座標変換]
     G --> H[TextLayer生成]
@@ -418,7 +418,7 @@ sequenceDiagram
     F->>F: バリデーション
     loop 各ページ
         F->>P: PDFPage生成（PDF.js）
-        P->>O: OCR実行（Tesseract.js）
+        P->>O: OCR実行（Flask API → OnnxOCR/PaddleOCR）
         O->>T: 座標変換・TextLayer生成
     end
     T->>S: PDF合成（pdf-lib）
@@ -436,7 +436,7 @@ sequenceDiagram
 | PDFPage (ImageData) | 約50MB (A4, 300dpi) | 500MB |
 | OCRResult | 約1MB（テキスト+座標） | 10MB |
 | TextLayer | 約500KB | 5MB |
-| Tesseract.js Worker | 150MB × 4並列 | 600MB |
+| Backend OCR Process | サーバー側メモリ | N/A (クライアント負荷なし) |
 | **合計** | - | **約1.1GB** ✅ |
 
 **目標**: 2GB以内 → ✅達成可能
@@ -462,7 +462,7 @@ flowchart LR
 1. **PDFPage.imageData**: OCR処理完了後、即座にnullに設定
 2. **OCRResult**: TextLayer生成後、即座に破棄
 3. **TextLayer**: PDF合成完了後、即座に破棄
-4. **Tesseract.js Worker**: 各ページのOCR処理後、`worker.terminate()`を実行
+4. **Backend OCR**: サーバー側でプロセス完了後、自動的にリソース解放
 
 ---
 

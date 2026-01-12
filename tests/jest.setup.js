@@ -5,7 +5,7 @@
 // @testing-library/jest-domをインポート
 import '@testing-library/jest-dom';
 
-// WebAssemblyのモック（Tesseract.jsがWebAssemblyを使用するため）
+// WebAssemblyのモック（WASMを使用するライブラリ用）
 global.WebAssembly = {
   instantiate: jest.fn(),
   compile: jest.fn(),

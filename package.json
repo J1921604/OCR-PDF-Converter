@@ -24,9 +24,10 @@
     "OCR",
     "PDF",
     "検索可能PDF",
-    "Tesseract",
-    "PDF.js",
-    "pdf-lib"
+    "OnnxOCR",
+    "PaddleOCR",
+    "Python",
+    "Flask"
   ],
   "author": "J1921604",
   "license": "MIT",
@@ -35,8 +36,7 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.0.379",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tesseract.js": "^5.1.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",

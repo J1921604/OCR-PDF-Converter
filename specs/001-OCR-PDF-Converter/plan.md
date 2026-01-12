@@ -198,9 +198,8 @@ OCR-PDF-Converter/
 │   │   ├── PreviewPane.jsx      # OCR結果プレビュー
 │   │   └── DownloadButton.jsx   # ダウンロードボタン
 │   ├── services/                 # ビジネスロジック
-│   │   ├── pdfProcessor.js      # PDF.js ラッパー
-│   │   ├── ocrEngine.js         # Tesseract.js ラッパー
-│   │   └── pdfGenerator.js      # pdf-lib ラッパー
+│   │   ├── pdfProcessor.js      # PDFプレビュー処理
+│   │   └── pdfGenerator.js      # PDF生成処理
 │   ├── utils/                    # ユーティリティ関数
 │   │   ├── fileValidator.js     # ファイル検証
 │   │   ├── coordinateConverter.js # 座標変換
@@ -312,17 +311,17 @@ flowchart TD
 
 **成果物**: `research.md` セクション「PDF.js Usage」
 
-#### R002: Tesseract.jsのパフォーマンスチューニング
+#### R002: Python Backend OCR Engine パフォーマンスチューニング
 
 **目的**: OCR処理速度を5秒以内に抑える方法を調査
 
 **調査内容**:
-- Workerスレッドの使用
-- 日本語モデル（jpn.traineddata）の最適化
+- OnnxOCR (CPU高速推論) とPaddleOCR (高精度日本語) の並列実行
 - 画像前処理（グレースケール化、二値化）の効果
-- バッチ処理の並列化
+- マルチエンジン実行での信頼度スコア比較
+- Flask APIでの非同期処理最適化
 
-**成果物**: `research.md` セクション「Tesseract.js Performance」
+**成果物**: `research.md` セクション「Python Backend OCR Engine Performance Tuning」
 
 #### R003: pdf-libでの透明テキストレイヤー生成
 
@@ -371,7 +370,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     A[Phase 0開始] --> B[R001: PDF.js]
-    A --> C[R002: Tesseract.js]
+    A --> C[R002: Python OCR Engines]
     A --> D[R003: pdf-lib]
     A --> E[R004: React+WASM]
     A --> F[R005: GitHub Pages]
@@ -619,7 +618,7 @@ npm run build
 現在使用しているエージェント（GitHub Copilot）のコンテキストファイルを更新します。
 
 **更新内容**:
-- 技術スタック: JavaScript, React, PDF.js, Tesseract.js, pdf-lib
+- 技術スタック: Python (Flask, OnnxOCR, PaddleOCR, pypdfium2), React, Webpack
 - プロジェクトタイプ: Webアプリケーション（単一プロジェクト）
 - 主要パターン: React Hooks, カスタムフック、Service層
 
@@ -680,7 +679,7 @@ Phase 1: セットアップ
 
 Phase 2: 基盤構築（ブロッキング）
 - PDFProcessor実装（PDF.js ラッパー）
-- OCREngine実装（Tesseract.js ラッパー）
+- OCR APIクライアント実装（Flask バックエンド連携）
 - PDFGenerator実装（pdf-lib ラッパー）
 
 Phase 3: ユーザーストーリー1（P1）

@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 
-// Mock Worker for Tesseract.js
+// Mock Worker for Web Workers
 global.Worker = class Worker {
   constructor() {
     this.onmessage = null;

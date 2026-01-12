@@ -83,10 +83,14 @@ npm install
 **インストールされるパッケージ**:
 - `react`: 18.2.0
 - `react-dom`: 18.2.0
-- `pdfjs-dist`: 4.0.379
-- `tesseract.js`: 5.1.0
-- `pdf-lib`: 1.17.1
+- `axios`: 1.6.0
 - その他開発ツール（Webpack, Babel, ESLint, Jest）
+
+**Pythonバックエンドの依存関係** (requirements.txt):
+- `flask`: 3.0
+- `pypdfium2`: 4.30
+- `onnxocr`: 2025.5
+- `paddleocr`: 2.7.0.3
 
 **所要時間**: 約3-5分（ネットワーク速度による）
 
@@ -209,9 +213,8 @@ OCR-PDF-Converter/
 │   │   ├── PreviewPane.jsx      # プレビュー
 │   │   └── DownloadButton.jsx   # ダウンロードボタン
 │   ├── services/                 # ビジネスロジック
-│   │   ├── pdfProcessor.js      # PDF.js ラッパー
-│   │   ├── ocrEngine.js         # Tesseract.js ラッパー
-│   │   └── pdfGenerator.js      # pdf-lib ラッパー
+│   │   ├── pdfProcessor.js      # PDFプレビュー処理
+│   │   └── pdfGenerator.js      # PDF生成処理
 │   ├── utils/                    # ユーティリティ関数
 │   │   ├── fileValidator.js     # ファイル検証
 │   │   ├── coordinateConverter.js # 座標変換
