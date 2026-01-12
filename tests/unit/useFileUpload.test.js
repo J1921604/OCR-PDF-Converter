@@ -90,8 +90,6 @@ describe('useFileUpload Hook', () => {
     expect(result.current.error).toBeTruthy();
     expect(result.current.error.message).toContain('検証失敗');
   }, 10000);
-    expect(result.current.error.message).toContain('検証失敗');
-  }, 10000);
 
   it('clearFileでファイル状態がリセットされる', async () => {
     const { result } = renderHook(() => useFileUpload());

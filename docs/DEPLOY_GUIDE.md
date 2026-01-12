@@ -1,6 +1,10 @@
 # デプロイガイド
 
-このドキュメントでは、OCR検索可能PDF変換アプリケーション（OnnxOCR + Python Backend）のローカルセットアップとGitHub Pagesデプロイ方法を説明します。
+**バージョン**: 1.0.0  
+**最終更新**: 2026-1-15  
+**リポジトリ**: https://github.com/J1921604/OCR-PDF-Converter
+
+このドキュメントでは、OCR検索可能PDF変換アプリケーション（OnnxOCR 2025.5 + PaddleOCR 2.7.0.3 + Python Backend）のローカルセットアップとGitHub Pagesデプロイ方法を説明します。
 
 重要: GitHub Pages は静的ホスティングのため **フロントエンドのみ**を公開します。OCR処理はバックエンドが必要で、Pages（HTTPS）から `http://localhost:5000` を呼ぶことは mixed content でブロックされます。
 

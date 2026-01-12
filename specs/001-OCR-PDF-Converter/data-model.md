@@ -1,8 +1,8 @@
 # データモデル設計
 
 **機能**: OCR検索可能PDF変換Webアプリ  
-**作成日**: 2026-01-10  
-**基準**: [spec.md](./spec.md), [requirements.md](./requirements.md), [research.md](./research.md)
+**作成日**: 2026-1-15  
+**基準**: [spec.md](https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/spec.md), [requirements.md](https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/requirements.md), [research.md](https://github.com/J1921604/OCR-PDF-Converter/blob/main/specs/001-OCR-PDF-Converter/research.md)
 
 ---
 
