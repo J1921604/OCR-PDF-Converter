@@ -1,4 +1,4 @@
-// App.jsx - メインアプリケーションコンポーネント（複数エンジン選択対応）
+// App.jsx - メインアプリケーションコンポーネント
 import React, { useState, useEffect, useRef } from 'react';
 import { FileUploader } from './components/FileUploader';
 import { OCRProgress } from './components/OCRProgress';
@@ -70,32 +70,17 @@ export function App() {
     }
   }, [file, cancelProcessing]);
 
-  // エンジン選択チェックボックスのハンドラー
-  const handleEngineToggle = (engineName) => {
-    setSelectedEngines(prev => ({
-      ...prev,
-      [engineName]: !prev[engineName],
-    }));
-  };
-
   const handleOCRStart = async () => {
     if (!file) return;
 
-    // 少なくとも1つのエンジンが選択されているか確認
-    const engines = Object.keys(selectedEngines).filter(k => selectedEngines[k]);
-    if (engines.length === 0) {
-      setGlobalError(new Error('少なくとも1つのOCRエンジンを選択してください'));
-      return;
-    }
-
-    console.log('[App] OCR処理開始:', file.name, 'エンジン:', engines);
+    console.log('[App] OCR処理開始:', file.name);
     setGlobalError(null);
     setSearchablePDF(null);
 
     try {
       // Pythonバックエンドで処理（PDFBlobを直接受け取る）
       console.log('[App] processPages 開始');
-      const result = await processPages(file, engines);
+      const result = await processPages(file, ocrEngine);
       console.log('[App] processPages 完了');
 
       if (result && result.pdfBlob) {
@@ -121,7 +106,6 @@ export function App() {
   };
 
   const showError = uploadError || ocrError || globalError;
-  const selectedEnginesList = Object.keys(selectedEngines).filter(k => selectedEngines[k]);
 
   return (
     <div className="app-container">
@@ -142,35 +126,25 @@ export function App() {
 
         {file && !isProcessing && !searchablePDF && (
           <div className="action-buttons">
-            <div className="engine-selector-checkboxes" aria-label="OCRエンジン選択">
-              <h3>OCRエンジン選択</h3>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={selectedEngines.onnxocr}
-                  onChange={() => handleEngineToggle('onnxocr')}
-                  disabled={isProcessing}
-                />
-                <span>OnnxOCR（CPU高速）</span>
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={selectedEngines.paddleocr}
-                  onChange={() => handleEngineToggle('paddleocr')}
-                  disabled={isProcessing}
-                />
-                <span>PaddleOCR（高精度）</span>
-              </label>
+            <div className="engine-selector" aria-label="OCRエンジン選択">
+              <label htmlFor="ocr-engine">OCRエンジン</label>
+              <select
+                id="ocr-engine"
+                value={ocrEngine}
+                onChange={(e) => setOcrEngine(e.target.value)}
+                disabled={isProcessing}
+              >
+                <option value="onnxocr">OnnxOCR（CPU高速）</option>
+                <option value="paddleocr">PaddleOCR（高機能）</option>
+              </select>
             </div>
             <button
               type="button"
               className="ocr-button"
               onClick={handleOCRStart}
-              disabled={isProcessing || selectedEnginesList.length === 0}
+              disabled={isProcessing}
             >
-              OCR変換開始
-              {selectedEnginesList.length > 0 && ` (${selectedEnginesList.join(', ')})`}
+              OCR変換開始（{ocrEngine === 'paddleocr' ? 'PaddleOCR' : 'OnnxOCR'}）
             </button>
           </div>
         )}

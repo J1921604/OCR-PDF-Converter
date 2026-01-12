@@ -39,18 +39,14 @@ def convert_image_to_pdf(image_path, pdf_path):
         # 画像サイズを取得（ピクセル）
         img_width, img_height = img.size
         
-        # A4サイズ（ポイント）: 595 x 842
-        # 画像をA4に収まるようにスケーリング
-        max_width = 595
-        max_height = 842
-        
-        ratio = min(max_width / img_width, max_height / img_height)
-        new_width = img_width * ratio
-        new_height = img_height * ratio
-        
-        # PDFを作成
-        c = canvas.Canvas(pdf_path, pagesize=(new_width, new_height))
-        c.drawImage(ImageReader(img), 0, 0, width=new_width, height=new_height)
+        # A4固定にすると要件（A4以外にも対応）に反するため、
+        # 画像のピクセル寸法をそのままポイントとして扱い、ページサイズを画像に合わせる。
+        # ※ 透明テキスト埋め込みは後段で元PDFのページサイズ基準で行う。
+        page_w_pt = float(img_width)
+        page_h_pt = float(img_height)
+
+        c = canvas.Canvas(pdf_path, pagesize=(page_w_pt, page_h_pt))
+        c.drawImage(ImageReader(img), 0, 0, width=page_w_pt, height=page_h_pt)
         c.save()
         
         return True
@@ -126,8 +122,23 @@ def ocr_process():
         # パラメータ取得
         dpi = int(request.form.get('dpi', 300))
         confidence_threshold = float(request.form.get('confidence_threshold', 0.5))
-        ocr_engines_param = request.form.get('ocr_engines', 'onnxocr')
-        ocr_engines = [e.strip() for e in ocr_engines_param.split(',')]
+        # 複数エンジン対応: カンマ区切りで複数エンジンを指定可能
+        ocr_engines_param = (request.form.get('ocr_engines', '') or '').strip().lower()
+        if not ocr_engines_param:
+            ocr_engines_param = os.environ.get('OCR_ENGINES', 'paddleocr')
+        
+        # カンマ区切りでエンジンリストを作成
+        requested_engines = [e.strip() for e in ocr_engines_param.split(',') if e.strip()]
+        if not requested_engines:
+            requested_engines = ['paddleocr']
+        
+        # サポートされているエンジンのみフィルタ
+        valid_engines = [e for e in requested_engines if e in {'onnxocr', 'paddleocr'}]
+        if not valid_engines:
+            return jsonify({
+                "success": False,
+                "error": "ocr_engines は 'onnxocr' および/または 'paddleocr' をカンマ区切りで指定してください（例: onnxocr,paddleocr）。"
+            }), 400
         
         # ファイル保存
         original_name = file.filename
@@ -170,13 +181,13 @@ def ocr_process():
         
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], f"output_{token}_{filename if not is_image else filename + '.pdf'}")
         
-        # OCR処理実行
+        # OCR処理実行（複数エンジン対応）
         result = process_pdf(
             input_path,
             output_path,
             dpi=dpi,
             confidence_threshold=confidence_threshold,
-            ocr_engines=ocr_engines
+            ocr_engines=valid_engines,  # 複数エンジンをリストで渡す
         )
         
         # 一時ファイル削除
@@ -187,7 +198,9 @@ def ocr_process():
                 "success": True,
                 "file_id": os.path.basename(output_path),
                 "pages_processed": result["pages_processed"],
-                "accuracy_summary": result.get("accuracy_summary", {}),
+                "engines": result.get("engines", valid_engines),  # 複数エンジン結果
+                "engine_stats": result.get("engine_stats"),  # エンジン別精度
+                "best_engine": result.get("best_engine"),  # 最高精度エンジン
                 "message": "OCR処理が完了しました"
             })
         else:

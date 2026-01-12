@@ -1,8 +1,10 @@
-// OCR処理用カスタムHook（Pythonバックエンド連携版・複数エンジン対応）
+// OCR処理用カスタムHook（Pythonバックエンド連携版）
 import { useState, useCallback, useRef } from 'react';
 import { handleOCRError } from '../utils/errorHandler';
 
 // APIエンドポイント設定
+// webpack.DefinePlugin で `process.env.REACT_APP_API_URL` は文字列にインライン化される想定。
+// ただしテスト/ブラウザ環境で `process` が存在しないケースもあるため安全に評価する。
 const API_BASE_URL =
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_URL)
     ? process.env.REACT_APP_API_URL
@@ -19,12 +21,9 @@ export function useOCR() {
   // 処理中断用のフラグ
   const abortControllerRef = useRef(null);
 
-  const processPages = useCallback(async (file, ocrEngines = ['onnxocr']) => {
-    // ocrEnginesは配列で受け取る（複数エンジン対応）
-    const engines = Array.isArray(ocrEngines) ? ocrEngines : [ocrEngines];
-    
+  const processPages = useCallback(async (file, ocrEngine = 'onnxocr') => {
     console.log('[useOCR] OCR処理開始 (Pythonバックエンド):', file.name);
-    console.log('[useOCR] OCRエンジン:', engines);
+    console.log('[useOCR] OCRエンジン:', ocrEngine);
     
     // 前回の処理をリセット
     if (abortControllerRef.current) {
@@ -47,8 +46,8 @@ export function useOCR() {
       formData.append('file', file);
       formData.append('dpi', '300');
       formData.append('confidence_threshold', '0.5');
-      // 複数エンジン対応: カンマ区切りで送信
-      formData.append('ocr_engines', engines.join(','));
+      // 単一エンジン運用: 1リクエストにつき1エンジン
+      formData.append('ocr_engine', String(ocrEngine || 'onnxocr').toLowerCase());
 
       console.log('[useOCR] APIリクエスト送信中...');
       setProgress(10);
@@ -85,9 +84,11 @@ export function useOCR() {
 
       setProgress(80);
 
-      // 精度サマリー（複数エンジン対応）
-      if (result.engine_stats) {
-        setAccuracySummary(result.engine_stats);
+      // 精度サマリー（バックエンド集計）
+      if (result.engine && result.engine_stats) {
+        setAccuracySummary({
+          [String(result.engine).toLowerCase()]: result.engine_stats,
+        });
       }
 
       // 処理済みPDFをダウンロード
@@ -117,8 +118,7 @@ export function useOCR() {
         textLayers: [], 
         pdfBlob: pdfBlob,
         pagesProcessed: result.pages_processed,
-        engines: result.engines,
-        bestEngine: result.best_engine,
+        engine: result.engine,
       };
     } catch (err) {
       if (err.name === 'AbortError') {

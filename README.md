@@ -4,39 +4,37 @@
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub%20Pages-success)](https://j1921604.github.io/OCR-PDF-Converter/)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/J1921604/OCR-PDF-Converter/releases)
 
-**スキャンしたPDFや画像を複数のOCRエンジン（OnnxOCR、Surya、PaddleOCR）で高精度にOCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
+**スキャンしたPDFや画像を高精度OCRエンジン（OnnxOCR・PaddleOCR）で処理し、検索可能なテキストレイヤーを追加するWebアプリケーション**
 
 ## 特徴
 
-✅ **複数OCRエンジン対応** - OnnxOCR、Surya、PaddleOCRから最適なエンジンを自動選択  
-✅ **精度比較表示** - 各エンジンの認識精度をリアルタイム表示  
+✅ **高精度OCRエンジン** - OnnxOCR（高速CPU推論）、PaddleOCR（高精度）から選択可能  
+✅ **OCRエンジン選択** - UI上でエンジンを切り替えて最適な結果を選択  
 ✅ **画像ファイル対応** - JPEG、PNG、TIFF画像も直接OCR処理可能  
 ✅ **Python + Reactハイブリッド** - バックエンドでPython、フロントエンドでReact  
 ✅ **日本語OCR最適化** - 日本語に特化した高精度認識  
 ✅ **複数ページ対応** - バッチ処理でリアルタイム進捗表示  
-✅ **ファイル制限** - フロント側は 10MB まで（バックエンド受信上限は 50MB だが運用上は 10MB）  
+✅ **ファイル制限** - 最大50MB対応  
 ✅ **透明テキストレイヤー** - ReportLabで完全透明なテキストレイヤーを合成  
 ✅ **ダークモードUI** - 黒とオレンジを基調とした立体的で金属的なデザイン  
+✅ **A4以外対応** - A3、Letter、Legal、カスタムサイズにも対応  
 
 ```mermaid
 flowchart LR
     A[PDF/画像<br/>アップロード<br/>React] --> B[PythonバックエンドAPI]
     B --> C[pypdfium2で<br/>画像変換]
-    C --> D1[OnnxOCR<br/>日本語認識]
-    C --> D2[Surya OCR<br/>多言語認識]
-    C --> D3[PaddleOCR<br/>高精度認識]
-    D1 --> E[精度比較<br/>最良エンジン選択]
-    D2 --> E
-    D3 --> E
-    E --> F[ReportLab<br/>透明テキスト生成]
+    C --> D{エンジン選択}
+    D -->|OnnxOCR| E1[OnnxOCR<br/>高速CPU推論]
+    D -->|PaddleOCR| E2[PaddleOCR<br/>高精度認識]
+    E1 --> F[ReportLab<br/>透明テキスト生成]
+    E2 --> F
     F --> G[pypdf合成]
     G --> H[検索可能PDF<br/>ダウンロード]
     
     style A fill:#61dafb
     style B fill:#3776ab
-    style D1 fill:#ffd43b
-    style D2 fill:#ff8c37
-    style D3 fill:#ff6b00
+    style E1 fill:#ffd43b
+    style E2 fill:#ff6b00
     style H fill:#d1ecf1
 ```
 
@@ -44,14 +42,14 @@ flowchart LR
 
 ### バックエンド (Python 3.10.11)
 - **OnnxOCR 2025.5**: 高速CPU推論OCRエンジン（PaddleOCRベース）
-- **Surya OCR 0.6.4**: GPU/CPU対応の最新OCRエンジン
-- **PaddleOCR 2.9.4**: 多機能高精度OCRエンジン
-- **pypdfium2**: PDFレンダリング
-- **pypdf**: PDF合成
-- **ReportLab**: 透明テキストレイヤー生成
-- **Flask**: REST APIサーバー
-- **OpenCV + NumPy**: 画像前処理
-- **Pillow**: 画像処理
+- **PaddleOCR 2.7.0.3**: 高精度多機能OCRエンジン
+- **pypdfium2 4.30**: PDFレンダリング
+- **pypdf 3.17**: PDF合成
+- **ReportLab 4.0**: 透明テキストレイヤー生成
+- **Flask 3.0**: REST APIサーバー
+- **OpenCV 4.6**: 画像前処理
+- **NumPy 1.24**: 数値計算
+- **Pillow 10.4**: 画像処理
 
 ### フロントエンド
 - **React 18**: UIフレームワーク
@@ -109,31 +107,32 @@ npm start
 ## 使い方
 
 1. **ファイルを選択**  
-   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイルまたは画像ファイル（JPEG、PNG、TIFF、10MB以下）を選択します。  
+   「ファイルを選択」ボタンをクリックし、スキャンしたPDFファイルまたは画像ファイル（JPEG、PNG、TIFF、50MB以下）を選択します。  
    **対応形式**: PDF / JPEG / PNG / TIFF（画像はフロント側でPDFに変換してから送信します）
 
 2. **OCR変換開始**  
-   「OCR変換開始」ボタンをクリックすると、Pythonバックエンドで以下の処理が実行されます：
-   - 複数のOCRエンジン（OnnxOCR、Surya、PaddleOCR）で並列処理
-   - 各エンジンの認識精度をリアルタイム比較
-   - 最も精度の高いエンジンの結果を採用  
+   OCRエンジン（OnnxOCR または PaddleOCR）を選択し、「OCR変換開始」ボタンをクリックすると、Pythonバックエンドで以下の処理が実行されます：
+   - 選択されたOCRエンジンでPDFの各ページをOCR処理
+   - OCR精度（平均信頼度）をリアルタイム表示
+   - 進捗バーでリアルタイムに処理状況を確認
+
 ```mermaid
 sequenceDiagram
     actor ユーザー
     participant React
     participant Flask
-    participant OnnxOCR
+    participant OCR as OnnxOCR/PaddleOCR
     
     ユーザー->>React: PDFアップロード
     React->>React: ファイル検証
-    ユーザー->>React: OCR開始
-    React->>Flask: POST /api/ocr/process
+    ユーザー->>React: エンジン選択+OCR開始
+    React->>Flask: POST /api/ocr/process<br/>(ocr_engine指定)
     Flask->>Flask: pypdfium2でPDF→画像
-    Flask->>OnnxOCR: OCR実行
-    OnnxOCR->>Flask: テキスト+座標
+    Flask->>OCR: OCR実行(選択エンジン)
+    OCR->>Flask: テキスト+座標+信頼度
     Flask->>Flask: ReportLabで透明テキスト
     Flask->>Flask: pypdfで合成
-    Flask->>React: 処理完了
+    Flask->>React: 処理完了+精度サマリー
     React->>Flask: GET /api/ocr/download
     Flask->>React: 検索可能PDF
     React->>ユーザー: ダウンロード
@@ -146,14 +145,13 @@ sequenceDiagram
 | カテゴリ | ライブラリ | バージョン | 用途 |
 |----------|-----------|------------|------|
 | OCRエンジン | [OnnxOCR](https://github.com/hiroi-sora/Umi-OCR) | 2025.5+ | 高速CPU推論OCR |
-| OCRエンジン | [Surya OCR](https://github.com/VikParuchuri/surya) | 0.6.4+ | GPU/CPU多言語OCR |
-| OCRエンジン | [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) | 2.9.4+ | 高精度多機能OCR |
-| PDFレンダリング | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | 4.26+ | PDF→画像変換 |
+| OCRエンジン | [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) | 2.7.0.3+ | 高精度多機能OCR |
+| PDFレンダリング | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) | 4.30+ | PDF→画像変換 |
 | PDF合成 | [pypdf](https://github.com/py-pdf/pypdf) | 3.17+ | PDFページ操作 |
 | テキストレイヤー | [ReportLab](https://www.reportlab.com/) | 4.0+ | 透明テキスト生成 |
 | Web API | [Flask](https://flask.palletsprojects.com/) | 3.0+ | REST APIサーバー |
-| 画像処理 | OpenCV + NumPy | 4.8+ / 1.24+ | 前処理 |
-| 画像処理 | Pillow | 10.1+ | 画像読み込み・変換 |
+| 画像処理 | OpenCV + NumPy | 4.6+ / 1.24+ | 前処理 |
+| 画像処理 | Pillow | 10.4+ | 画像読み込み・変換 |
 
 ### フロントエンド
 
@@ -282,12 +280,12 @@ on:
 **症状**: PDFをアップロード後、エラーメッセージが表示される
 
 **原因**:
-- ファイルサイズが10MBを超えている
+- ファイルサイズが50MBを超えている
 - 破損したPDFファイル
 - 暗号化されたPDFファイル
 
 **解決方法**:
-- ファイルサイズを確認（10MB以下）
+- ファイルサイズを確認（50MB以下）
 - 別のPDFで試す
 - 暗号化を解除してから再試行
 
@@ -299,7 +297,7 @@ on:
 - 低品質なスキャン画像
 
 **解決方法**:
-- OnnxOCRは自動的に300dpiで処理します
+- OCR処理は選択したエンジン（OnnxOCR/PaddleOCR）で自動的に300dpiで処理します
 - 高解像度でスキャンし直す
 - コントラストを高める
 
@@ -308,7 +306,7 @@ on:
 - **1ページPDF処理時間**: 5秒以内（P95、OnnxOCR CPU推論）
 - **10ページPDF処理時間**: 50秒以内（P95）
 - **メモリ使用量**: Python 512MB、React 256MB（ピーク時）
-- **ファイルサイズ制限**: 10MB（フロント制限。バックエンドは50MB設定だが運用上10MB）
+- **ファイルサイズ制限**: 50MB
 
 ## よくある質問（FAQ）
 
@@ -316,16 +314,16 @@ on:
 A: Pythonバックエンドはローカル環境（localhost:5000）で動作します。サーバーへのファイル送信は行われません。
 
 **Q2: 処理できるファイルサイズの上限は？**  
-A: フロント側は 10MB までです（バックエンドは 50MB まで受け付けますが、運用上は 10MB を上限としています）。
+A: 最大50MBまで対応しています。
 
 **Q3: 日本語以外の言語も対応していますか？**  
-A: OnnxOCRは多言語対応（日本語、英語、中国語）ですが、現在は日本語に最適化しています。
+A: OnnxOCRとPaddleOCRは多言語対応（日本語、英語、中国語など）ですが、現在は日本語に最適化しています。
 
 **Q4: 商用利用は可能ですか？**  
 A: はい。MITライセンスで公開しているため、商用利用可能です。
 
 **Q5: オフラインで使用できますか？**  
-A: Python環境とOnnxOCRモデルが事前にインストールされていれば、完全オフラインで使用可能です。
+A: Python環境とOCRモデルが事前にインストールされていれば、完全オフラインで使用可能です。
 
 ## ブラウザサポート
 
@@ -348,6 +346,7 @@ A: Python環境とOnnxOCRモデルが事前にインストールされていれ�
 
 このプロジェクトは以下のオープンソースライブラリを使用しています：
 - [OnnxOCR](https://github.com/hiroi-sora/Umi-OCR) - 高速CPU推論OCRエンジン
+- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) - 高精度多機能OCRエンジン
 - [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) - PDFレンダリング
 - [pypdf](https://github.com/py-pdf/pypdf) - PDF操作
 - [ReportLab](https://www.reportlab.com/) - PDFテキストレイヤー生成

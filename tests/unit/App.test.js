@@ -57,12 +57,13 @@ describe('App Component', () => {
     });
 
     render(<App />);
-    const ocrButton = screen.getByText('OCR変換開始'); // Guessing button text based on App.jsx read likely having default or specific text?
-    // App.jsx read showed: <button ... className="ocr-button" onClick={handleOCRStart}>
-    // But text inside button wasn't clearly visible in the partial read. 
-    // Let's check App.jsx content again if needed, or just search by class.
-    // React testing library prefers text.
-    // Let's assume standard text or check class if needed.
-    // Actually, let's just check for call.
+    // OCRボタンはエンジン名が付与されるため、部分一致で検証する
+    const ocrButton = screen.getByRole('button', { name: /OCR変換開始/ });
+    expect(ocrButton).toBeInTheDocument();
+
+    // エンジン選択チェックボックスが表示されること
+    expect(screen.getByText('OCRエンジン選択')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /OnnxOCR/ })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /PaddleOCR/ })).toBeInTheDocument();
   });
 });

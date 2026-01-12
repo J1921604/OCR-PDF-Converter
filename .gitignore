@@ -48,6 +48,10 @@ cypress/videos/
 *.tmp
 *.temp
 input_*.pdf
+
+# OCRモデルファイル
+.paddleocr/
+.onnxocr/
 output_*.pdf
 
 # キャッシュ

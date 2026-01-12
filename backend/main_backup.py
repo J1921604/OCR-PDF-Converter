@@ -194,14 +194,16 @@ def get_paddleocr_engine():
         print("[OCR] PaddleOCRエンジンを初期化中...")
         try:
             # PaddleOCR 2.x 系（今回の想定）での安定設定。
-            # 2.7系では多くのパラメータが非対応のため、最小限のみ指定
+            # - use_angle_cls は回転分類で遅くなる/失敗要因になることがあるため既定で無効
+            # - Windows/CI を想定し GPU は既定で無効
             _paddle_engine = PaddleOCREngine(
                 lang='japan',
                 use_angle_cls=False,
+                use_gpu=False,
+                show_log=False,
             )
-        except (TypeError, ValueError) as e:
-            # 互換: パラメータが異なる場合は言語のみ指定
-            print(f"[OCR] PaddleOCR初期化エラー（最小設定で再試行）: {e}")
+        except TypeError:
+            # 互換: 古い/新しい版で引数が異なる場合がある
             _paddle_engine = PaddleOCREngine(lang='japan')
         print("[OCR] PaddleOCRエンジン初期化完了")
     return _paddle_engine
@@ -527,12 +529,11 @@ def process_pdf(
     dpi=300,
     confidence_threshold=0.5,
     progress_callback=None,
-    ocr_engine=None,
-    ocr_engines=None,
+    ocr_engine='paddleocr',
 ):
     """PDFを処理して検索可能PDFに変換する（メイン処理）
 
-    複数エンジン並列処理対応。各ページで全エンジンを実行し、最も高精度なエンジンの結果を採用。
+    1リクエストで利用する OCR エンジンは 1つ（単一選択）。
     
     Args:
         input_pdf_path: 入力PDFファイルパス
@@ -540,51 +541,36 @@ def process_pdf(
         dpi: OCR用の画像解像度
         confidence_threshold: OCR信頼度の閾値
         progress_callback: 進捗コールバック関数 callback(current, total, message)
-        ocr_engine: 単一エンジン名（後方互換性）
-        ocr_engines: 複数エンジンリスト（複数エンジン対応）
+        ocr_engine: 使用するOCRエンジン（onnxocr / paddleocr）
     """
     pdf = None
     try:
-        # エンジンリスト決定（複数エンジン優先、なければ単一エンジン）
-        if ocr_engines:
-            engines_to_use = [_normalize_engine_name(e) for e in ocr_engines if e]
-        elif ocr_engine:
-            engines_to_use = [_normalize_engine_name(ocr_engine)]
-        else:
-            engines_to_use = [DEFAULT_OCR_ENGINE]
-        
-        # 重複削除
-        engines_to_use = list(dict.fromkeys(engines_to_use))
-        
-        # エンジンの可用性を早めにチェック
-        for eng in engines_to_use:
-            if eng == 'paddleocr':
-                if not ensure_paddleocr_available():
-                    raise ValueError(f"PaddleOCR is not available: {_PADDLE_IMPORT_ERROR}")
-            elif eng == 'onnxocr':
-                if not ensure_onnxocr_available():
-                    raise ValueError(f"OnnxOCR is not available: {_ONNX_IMPORT_ERROR}")
+        # 単一エンジン運用: 指定された1つのみで処理
+        ocr_engine = _normalize_engine_name(ocr_engine)
+
+        # ここでエンジンの可用性を早めにチェック（ページ処理に入る前に失敗させる）
+        if ocr_engine == 'paddleocr':
+            if not ensure_paddleocr_available():
+                raise ValueError(f"PaddleOCR is not available: {_PADDLE_IMPORT_ERROR}")
+        elif ocr_engine == 'onnxocr':
+            if not ensure_onnxocr_available():
+                raise ValueError(f"OnnxOCR is not available: {_ONNX_IMPORT_ERROR}")
 
         # PDFページ数を取得
         pdf = pdfium.PdfDocument(input_pdf_path)
         page_count = len(pdf)
-        print(f"[開始] PDFファイル: {input_pdf_path}, ページ数: {page_count}, エンジン: {engines_to_use}")
+        print(f"[開始] PDFファイル: {input_pdf_path}, ページ数: {page_count}")
 
-        # PDFページサイズ（pt）を取得
+        # PDFページサイズ（pt）を取得（A4以外も含めて正確に扱う）
+        # ここでファイルパスを渡すと Windows でハンドルが残りやすいため、BytesIO 経由にする
         with open(input_pdf_path, 'rb') as f:
             reader_for_size = PdfReader(io.BytesIO(f.read()))
         
-        # エンジン別の精度集計
-        engine_stats = {}
-        for eng in engines_to_use:
-            engine_stats[eng] = {
-                'total_text_count': 0,
-                'total_conf_sum': 0.0,
-                'pages_processed': 0,
-            }
-        
-        # 各ページで全エンジンを実行し、最良の結果を選択
         overlay_list = []
+
+        # 精度集計（エンジン表示用）
+        total_text_count = 0
+        total_conf_sum = 0.0
         
         for page_num in range(page_count):
             try:
@@ -606,53 +592,29 @@ def process_pdf(
                 scale_x = page_w_pt / float(img_width)
                 scale_y = page_h_pt / float(img_height)
                 
-                # 2. 全エンジンでOCRを実行
-                engine_results = {}
-                for eng in engines_to_use:
-                    print(f"  → {eng} OCR実行中...")
-                    try:
-                        ocr_results = run_ocr(pil_img, eng)
-                        ocr_items = normalize_ocr_results(ocr_results, confidence_threshold)
-                        
-                        if ocr_items:
-                            avg_confidence = sum(item['confidence'] for item in ocr_items) / len(ocr_items)
-                            print(f"    ✓ {eng}: {len(ocr_items)}個のテキスト検出 (平均信頼度: {avg_confidence:.2%})")
-                            
-                            engine_stats[eng]['total_text_count'] += len(ocr_items)
-                            engine_stats[eng]['total_conf_sum'] += sum(item['confidence'] for item in ocr_items)
-                            engine_stats[eng]['pages_processed'] += 1
-                            
-                            engine_results[eng] = {
-                                'items': ocr_items,
-                                'avg_confidence': avg_confidence,
-                                'text_count': len(ocr_items),
-                            }
-                        else:
-                            print(f"    ✗ {eng}: テキストが検出されませんでした")
-                    except Exception as e:
-                        print(f"    ✗ {eng}: OCR実行エラー: {e}")
-                
-                # 3. 最良のエンジン結果を選択（平均信頼度が最も高いもの）
-                best_engine = None
-                best_result = None
-                best_confidence = -1.0
-                
-                for eng, res in engine_results.items():
-                    if res['avg_confidence'] > best_confidence:
-                        best_confidence = res['avg_confidence']
-                        best_engine = eng
-                        best_result = res
-                
-                # 4. 透明テキストレイヤーPDFを作成（最良エンジンの結果を使用）
-                if best_result:
+                # 2. OCRを実行
+                print(f"  → {ocr_engine} OCR実行中...")
+                ocr_results = run_ocr(pil_img, ocr_engine)
+                ocr_items = normalize_ocr_results(ocr_results, confidence_threshold)
+                if ocr_items:
+                    avg_confidence = sum(item['confidence'] for item in ocr_items) / len(ocr_items)
+                    print(f"    ✓ {len(ocr_items)}個のテキスト検出 (平均信頼度: {avg_confidence:.2%})")
+
+                    total_text_count += len(ocr_items)
+                    total_conf_sum += sum(item['confidence'] for item in ocr_items)
+                else:
+                    print("    ✗ テキストが検出されませんでした")
+
+                # 3. 透明テキストレイヤーPDFを作成
+                if ocr_items:
                     overlay_bytes = create_overlay_pdf(
                         page_w_pt,
                         page_h_pt,
-                        best_result['items'],
+                        ocr_items,
                         scale_x=scale_x,
                         scale_y=scale_y,
                     )
-                    print(f"  → オーバーレイPDF作成完了（使用エンジン: {best_engine}, 信頼度: {best_confidence:.2%}）")
+                    print(f"  → オーバーレイPDF作成完了")
                 else:
                     overlay_bytes = None
                     print(f"  → テキストが検出されませんでした")
@@ -673,35 +635,18 @@ def process_pdf(
         if progress_callback:
             progress_callback(page_count, page_count, "完了")
         
-        # エンジン別の統計を計算
-        engine_stats_summary = {}
-        best_engine_overall = None
-        best_confidence_overall = -1.0
-        
-        for eng in engines_to_use:
-            stats = engine_stats[eng]
-            if stats['total_text_count'] > 0:
-                avg_conf = stats['total_conf_sum'] / stats['total_text_count']
-            else:
-                avg_conf = 0.0
-            
-            engine_stats_summary[eng] = {
-                "avg_confidence": avg_conf,
-                "total_text_count": stats['total_text_count'],
-                "pages_processed": stats['pages_processed'],
-            }
-            
-            if avg_conf > best_confidence_overall:
-                best_confidence_overall = avg_conf
-                best_engine_overall = eng
+        overall_avg_conf = (total_conf_sum / total_text_count) if total_text_count > 0 else 0.0
 
         return {
             "success": True,
             "output_path": output_pdf_path,
             "pages_processed": page_count,
-            "engines": engines_to_use,
-            "engine_stats": engine_stats_summary,
-            "best_engine": best_engine_overall,
+            "engine": ocr_engine,
+            "engine_stats": {
+                "avg_confidence": overall_avg_conf,
+                "total_text_count": total_text_count,
+                "pages_processed": page_count,
+            },
         }
         
     except Exception as e:
@@ -717,6 +662,7 @@ def process_pdf(
                 pdf.close()
         except Exception:
             pass
+
 
 if __name__ == "__main__":
     # テスト実行
