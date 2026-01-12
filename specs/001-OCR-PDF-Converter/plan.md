@@ -5,16 +5,20 @@
 
 ## 概要
 
-スキャンしたPDFファイルをPythonバックエンド（OnnxOCR）で高精度OCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション。Reactフロントエンド + Flask APIサーバー構成。
+スキャンしたPDFファイルをPythonバックエンド（複数OCRエンジン並列処理）で高精度OCR処理し、検索可能なテキストレイヤーを追加するWebアプリケーション。Reactフロントエンド + Flask APIサーバー構成。
 
 **主要要件**:
-- PDFアップロード → OCR処理（OnnxOCR、日本語高精度） → 検索可能PDF生成
+- PDFアップロード → 複数OCRエンジン並列処理（OnnxOCR、PaddleOCR） → 最高精度結果を採用 → 検索可能PDF生成
+- チェックボックスUIで複数エンジン選択可能
+- 各エンジンの精度統計表示
 - 複数ページPDFのバッチ処理（進捗表示付き）
 - Python 3.10.11 + 仮想環境(.venv)での実行
 
 **技術アプローチ**:
 - pypdfium2でPDF→画像変換（バックエンド）
 - OnnxOCR 2025.5（ONNX Runtime CPU推論）で高速OCR処理
+- PaddleOCR 2.7.0.3（日本語特化モデル）で高精度OCR処理
+- 各ページで全選択エンジンを並列実行し、平均信頼度が最も高いエンジンの結果を採用
 - ReportLabで透明テキストレイヤー生成
 - pypdfでPDF合成
 - Reactでユーザーインターフェース構築
@@ -23,16 +27,21 @@
 flowchart LR
     A[PDF<br/>アップロード<br/>React] --> B[Flask API<br/>POST /api/ocr/process]
     B --> C[pypdfium2<br/>PDF→画像]
-    C --> D[OnnxOCR<br/>日本語認識]
-    D --> E[ReportLab<br/>透明テキスト]
-    E --> F[pypdf<br/>PDF合成]
-    F --> G[検索可能PDF<br/>GET /api/ocr/download]
-    G --> H[React<br/>ダウンロード]
+    C --> D1[OnnxOCR<br/>日本語認識]
+    C --> D2[PaddleOCR<br/>日本語認識]
+    D1 --> E{最高精度<br/>エンジン選択}
+    D2 --> E
+    E --> F[ReportLab<br/>透明テキスト]
+    F --> G[pypdf<br/>PDF合成]
+    G --> H[検索可能PDF<br/>GET /api/ocr/download]
+    H --> I[React<br/>ダウンロード]
     
     style A fill:#61dafb
     style B fill:#3776ab
-    style D fill:#ffd43b
-    style H fill:#d1ecf1
+    style D1 fill:#ffd43b
+    style D2 fill:#ffd43b
+    style E fill:#28a745
+    style I fill:#d1ecf1
 ```
 
 ## 技術コンテキスト
@@ -41,6 +50,7 @@ flowchart LR
 **フロントエンド**: JavaScript (ES6+), React 18.2  
 **主要依存関係（Python）**: 
 - OnnxOCR 2025.5 (高速CPU推論OCRエンジン)
+- PaddleOCR 2.7.0.3 (高精度OCRエンジン、日本語特化モデル)
 - pypdfium2 4.30 (PDFレンダリング)
 - pypdf 5.1 (PDF操作)
 - ReportLab 4.2 (テキストレイヤー生成)
@@ -61,9 +71,10 @@ flowchart LR
 
 **プロジェクトタイプ**: ハイブリッド（Pythonバックエンド + Reactフロントエンド）  
 **パフォーマンス目標**:
-- 1ページPDF (A4, 300dpi) OCR処理: 5秒以内 (P95、OnnxOCR CPU推論)
+- 1ページPDF (A4, 300dpi) OCR処理: 5秒以内 (P95、複数エンジン並列実行)
 - 10ページPDF OCR処理: 50秒以内 (P95)
-- メモリ使用量: Python 512MB、React 256MB（ピーク時）
+- メモリ使用量: Python 1GB、React 256MB（ピーク時）
+- 各エンジンの精度統計をリアルタイム表示
 
 **制約**:
 - ファイルサイズ上限: 50MB
@@ -80,7 +91,8 @@ flowchart LR
 flowchart TD
     subgraph backend["Pythonバックエンド (localhost:5000)"]
         A[Flask 3.0]
-        B[OnnxOCR 2025.5]
+        B1[OnnxOCR 2025.5]
+        B2[PaddleOCR 2.7.0.3]
         C[pypdfium2<br/>pypdf<br/>ReportLab]
         D[ONNX Runtime<br/>CPU推論]
     end

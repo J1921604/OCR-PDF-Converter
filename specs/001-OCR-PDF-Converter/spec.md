@@ -3,12 +3,13 @@
 **機能ブランチ**: `001-OCR-PDF-Converter`  
 **作成日**: 2026-1-15  
 **ステータス**: 実装完了（v1.0.0）  
-**入力**: スキャンPDFをOnnxOCRで高精度にOCR処理し、検索可能PDFに変換するWebアプリケーション
+**入力**: スキャンPDFを複数OCRエンジンで並列処理し、高精度な結果を検索可能PDFに変換するWebアプリケーション
 
 ## 技術スタック概要
 
 ### バックエンド (Python 3.10.11)
 - **OnnxOCR 2025.5**: 高速CPU推論OCRエンジン（PaddleOCRベース）
+- **PaddleOCR 2.7.0.3**: 高精度OCRエンジン（日本語特化モデル）
 - **pypdfium2 4.30**: PDFレンダリング
 - **pypdf 5.1**: PDF合成
 - **ReportLab 4.2**: 透明テキストレイヤー生成
@@ -18,20 +19,28 @@
 - **React 18.2**: UIフレームワーク
 - **Webpack 5.104**: モジュールバンドラー
 
+### 複数エンジン並列処理
+各PDFページで全選択エンジン（OnnxOCR、PaddleOCR）を並列実行し、平均信頼度が最も高いエンジンの結果を透明テキストレイヤーに採用。チェックボックスUIで複数エンジン選択可能。
+
 ```mermaid
 flowchart LR
     A[PDFアップロード<br/>React] --> B[POST /api/ocr/process<br/>Flask]
     B --> C[pypdfium2<br/>PDF→画像変換]
-    C --> D[OnnxOCR<br/>日本語認識]
-    D --> E[ReportLab<br/>透明テキスト生成]
-    E --> F[pypdf<br/>PDF合成]
-    F --> G[GET /api/ocr/download<br/>検索可能PDF]
-    G --> H[React<br/>ダウンロード]
+    C --> D1[OnnxOCR<br/>日本語認識]
+    C --> D2[PaddleOCR<br/>日本語認識]
+    D1 --> E{最高精度<br/>エンジン選択}
+    D2 --> E
+    E --> F[ReportLab<br/>透明テキスト生成]
+    F --> G[pypdf<br/>PDF合成]
+    G --> H[GET /api/ocr/download<br/>検索可能PDF]
+    H --> I[React<br/>ダウンロード]
     
     style A fill:#61dafb
     style B fill:#3776ab
-    style D fill:#ffd43b
-    style H fill:#d1ecf1
+    style D1 fill:#ffd43b
+    style D2 fill:#ffd43b
+    style E fill:#28a745
+    style I fill:#d1ecf1
 ```
 
 ## ユーザーシナリオ & テスト *(必須)*
@@ -57,21 +66,29 @@ sequenceDiagram
     participant React
     participant Flask
     participant OnnxOCR
+    participant PaddleOCR
     participant ReportLab
 
     ユーザー->>React: PDFファイル選択
     React->>React: ファイル検証（サイズ・形式）
     React-->>ユーザー: ファイル情報表示
+    ユーザー->>React: OCRエンジン選択（チェックボックス）
     ユーザー->>React: OCR変換開始
-    React->>Flask: POST /api/ocr/process
+    React->>Flask: POST /api/ocr/process (engines=onnxocr,paddleocr)
     Flask->>Flask: pypdfium2でPDF→画像変換
-    Flask->>OnnxOCR: OCR実行（日本語認識）
-    OnnxOCR-->>Flask: テキスト + 座標情報
+    par 並列OCR実行
+        Flask->>OnnxOCR: OCR実行（日本語認識）
+        OnnxOCR-->>Flask: テキスト + 座標 + 信頼度
+    and
+        Flask->>PaddleOCR: OCR実行（日本語認識）
+        PaddleOCR-->>Flask: テキスト + 座標 + 信頼度
+    end
+    Flask->>Flask: 最高精度エンジン結果を選択
     Flask->>ReportLab: 透明テキストレイヤー生成
     ReportLab->>Flask: 透明PDF生成
     Flask->>Flask: pypdfでPDF合成
-    Flask-->>React: 処理完了応答
-    React-->>ユーザー: ダウンロードボタン表示
+    Flask-->>React: 処理完了応答（engine_stats, best_engine）
+    React-->>ユーザー: ダウンロードボタン表示 + 精度情報表示
     ユーザー->>React: ダウンロード
     React->>Flask: GET /api/ocr/download/{file_id}
     Flask-->>React: 検索可能PDF
@@ -214,7 +231,8 @@ flowchart LR
 
 ## 前提条件
 
-- OCR処理はPythonバックエンド（Flask + OnnxOCR）で実行する
+- OCR処理はPythonバックエンド（Flask + 複数OCRエンジン）で実行する
+- 複数OCRエンジン（OnnxOCR、PaddleOCR）を並列実行し、最高精度の結果を採用する
 - フロントエンドはReact SPAとしてビルドし、ローカル開発時は `http://localhost:8080` で動作する
 - 画像入力（JPEG/PNG/TIFF）はフロントエンド側でPDFへ変換し、バックエンドにはPDFとして送信する
 - GitHub Pagesはフロントエンドの静的配信先として利用できる（OCR処理は別途バックエンドが必要）
@@ -229,7 +247,7 @@ flowchart LR
 
 ## 採用技術スタック（実装準拠）
 
-- **バックエンド**: Python 3.10.11 / Flask / OnnxOCR / pypdfium2 / pypdf / ReportLab / OpenCV
+- **バックエンド**: Python 3.10.11 / Flask / OnnxOCR 2025.5 / PaddleOCR 2.7.0.3 / pypdfium2 / pypdf / ReportLab / OpenCV
 - **フロントエンド**: React 18 / Webpack 5
 - **ホスティング**: GitHub Pages（フロントエンドの静的配信）
 - **CI/CD**: GitHub Actions
