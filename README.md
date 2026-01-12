@@ -55,6 +55,61 @@ flowchart LR
 - **React 18**: UIフレームワーク
 - **Webpack 5**: モジュールバンドラー
 
+## OCRエンジン並列処理の詳細
+
+本アプリケーションは、複数のOCRエンジンを並列実行し、最も高精度な結果を自動選択する独自アルゴリズムを実装しています。
+
+### 処理フロー
+
+1. **エンジン選択**: UIでOnnxOCR、PaddleOCRから複数選択可能
+2. **並列OCR実行**: 各PDFページで全選択エンジンを同時に実行
+3. **精度評価**: 各エンジンの平均信頼度（confidence）を計算
+4. **最良エンジン選択**: 平均信頼度が最も高いエンジンの結果を採用
+5. **透明テキスト埋め込み**: 最良エンジンの結果で検索可能PDF生成
+
+### 実装詳細
+
+**コード位置**: [backend/main.py L630-L672](https://github.com/J1921604/OCR-PDF-Converter/blob/main/backend/main.py#L630-L672)
+
+```python
+# 各ページで全エンジンを実行し、最良の結果を選択
+for page_num in range(page_count):
+    # 全エンジンでOCR実行
+    engine_results = {}
+    for eng in engines_to_use:
+        ocr_results = run_ocr(pil_img, eng)
+        ocr_items = normalize_ocr_results(ocr_results, confidence_threshold)
+        if ocr_items:
+            avg_confidence = sum(item['confidence'] for item in ocr_items) / len(ocr_items)
+            engine_results[eng] = {
+                'items': ocr_items,
+                'avg_confidence': avg_confidence,
+            }
+    
+    # 最良のエンジン結果を選択（平均信頼度が最も高いもの）
+    best_engine = None
+    best_confidence = -1.0
+    for eng, res in engine_results.items():
+        if res['avg_confidence'] > best_confidence:
+            best_confidence = res['avg_confidence']
+            best_engine = eng
+            best_result = res
+    
+    # 透明テキストレイヤーPDF作成（最良エンジンの結果を使用）
+    if best_result:
+        overlay_bytes = create_overlay_pdf(
+            page_w_pt, page_h_pt, best_result['items'],
+            scale_x=scale_x, scale_y=scale_y,
+        )
+```
+
+### 統計情報表示
+
+処理完了後、各エンジンの精度統計をUIに表示：
+- **平均信頼度**: 全ページの平均OCR信頼度
+- **テキスト検出数**: 検出した全テキスト要素数
+- **採用ページ数**: 各エンジンが最良として採用されたページ数
+
 ## デモ
 
 🌐 **ライブデモ（UIのみ）**: [https://j1921604.github.io/OCR-PDF-Converter/](https://j1921604.github.io/OCR-PDF-Converter/)
