@@ -31,9 +31,9 @@
 - [x] T009 npm installを実行し全依存パッケージをインストール
 - [x] T010 [P] public/index.htmlを作成（HTML5テンプレート、CSP meta tagを含む）
 - [x] T011 [P] public/manifest.jsonを作成（PWA manifest）
-- [ ] T012 [P] public/assets/wasm/ディレクトリを作成し、jpn.traineddataモデルを配置
-- [ ] T013 [P] public/assets/fonts/ディレクトリを作成し、HeiseiKakuGo-W5.ttfフォントを配置
 - [x] T014 [P] src/styles/main.cssを作成（基本スタイル、レスポンシブ対応）
+
+**注**: T012（jpn.traineddataモデル）、T013（HeiseiKakuGo-W5.ttfフォント）はPythonバックエンド実装のため不要（削除）
 
 ---
 
@@ -382,14 +382,16 @@ gantt
 ```
 
 **マイルストーン**:
-- 開始+1日: Phase 1完了（セットアップ）
-- 開始+5日: Phase 2完了（基盤構築）
-- 開始+9日: Phase 3完了（US1 MVP）✅ デプロイ可能
-- 開始+13日: Phase 4完了（US2 複数ページ）
-- 開始+17日: Phase 5完了（US3 プレビュー）
-- 開始+12日: Phase 6完了（画像対応）
-- 開始+16日: Phase 7完了（多様サイズ）
-- 開始+20日: Phase 8完了（v1.0.0リリース）🎉
+- 開始日: 2026-1-15（変更可能）
+- Phase 1完了: 開始+2営業日（セットアップ）
+- Phase 2完了: Phase 1後+4営業日（基盤構築）
+- Phase 3完了: Phase 2後+4営業日（US1 MVP）✅ デプロイ可能
+- Phase 4完了: Phase 3後+4営業日（US2 複数ページ）
+- Phase 5完了: Phase 4後+4営業日（US3 プレビュー）
+- Phase 6完了: Phase 3後+3営業日（画像対応、Phase 3と並行可能）
+- Phase 7完了: Phase 6後+4営業日（多様サイズ）
+- Phase 8完了: Phase 5後+3営業日（v1.0.0リリース）🎉
+- **休日除外**: 土日、年末年始（12/27-1/4）
 
 ---
 
