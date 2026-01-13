@@ -8,6 +8,8 @@
 """
 import os
 import io
+import ssl
+import urllib3
 import numpy as np
 import cv2
 import pypdfium2 as pdfium
@@ -16,6 +18,23 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from PIL import Image
+
+# SSL証明書検証を無効化（企業プロキシ環境でのPaddleOCRモデルダウンロード対応）
+# 注意: 本番環境では適切な証明書設定を推奨
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Python 2.7.9以前では不要
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+# urllib3のSSL警告を抑制
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# requests/urllib3のSSL検証を無効化
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+os.environ['CURL_CA_BUNDLE'] = ''
 
 # --- OCRフレームワーク セッティング ---
 # PaddleOCR/PaddlePaddle は初回実行時にモデル/キャッシュを配置する。
@@ -131,6 +150,26 @@ def ensure_paddleocr_available():
     if _PADDLE_IMPORT_ERROR is not None:
         return False
     try:
+        # PaddleOCRのrequestsモジュールにSSL検証無効化パッチを適用
+        import requests
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.ssl_ import create_urllib3_context
+        
+        class SSLAdapter(HTTPAdapter):
+            def init_poolmanager(self, *args, **kwargs):
+                context = create_urllib3_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                kwargs['ssl_context'] = context
+                return super().init_poolmanager(*args, **kwargs)
+        
+        # requestsのデフォルトセッションにパッチを適用
+        original_get = requests.get
+        def patched_get(url, **kwargs):
+            kwargs.setdefault('verify', False)
+            return original_get(url, **kwargs)
+        requests.get = patched_get
+        
         from paddleocr import PaddleOCR as _PaddleOCREngine
 
         # PaddleOCR 2.x の保存先ハードコード対策（~/.paddleocr を上書き）
