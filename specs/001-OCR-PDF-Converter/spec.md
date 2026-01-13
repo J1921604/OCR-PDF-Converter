@@ -22,6 +22,17 @@
 ### 複数エンジン並列処理
 各PDFページで全選択エンジン（OnnxOCR、PaddleOCR）を並列実行し、平均信頼度が最も高いエンジンの結果を透明テキストレイヤーに採用。チェックボックスUIで複数エンジン選択可能。
 
+### SSL証明書検証エラー対応
+企業プロキシ環境やファイアウォール配下で、PaddleOCRがモデルファイルのダウンロード時にSSL証明書検証エラーが発生する場合の対応を実装済み（backend/main.py L1-L40）。
+
+**実装内容**:
+- SSL証明書検証の無効化: `ssl._create_unverified_context`
+- urllib3警告の抑制: `urllib3.disable_warnings()`
+- 環境変数の設定: `REQUESTS_CA_BUNDLE=''`, `CURL_CA_BUNDLE=''`
+- requests.getパッチング: `verify=False` パラメータ自動注入
+
+**セキュリティ注意**: ローカル開発環境でのみ使用してください
+
 ```mermaid
 flowchart LR
     A[PDFアップロード<br/>React] --> B[POST /api/ocr/process<br/>Flask]

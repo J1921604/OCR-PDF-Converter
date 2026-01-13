@@ -70,6 +70,37 @@ Python依存は **`requirements.txt` を唯一の正**とする。
 - pypdf（合成）
 - Pillow（画像処理補助）
 
+#### SSL証明書検証エラー対応
+
+企業プロキシ環境やファイアウォール配下で、PaddleOCRがモデルファイルのダウンロード時にSSL証明書検証エラーが発生する場合があります。
+
+**実装済み対応**（backend/main.py L1-L40）:
+
+```python
+import ssl
+import urllib3
+import os
+
+# SSL証明書検証を無効化
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# urllib3警告を抑制
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# 環境変数を設定
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+os.environ['CURL_CA_BUNDLE'] = ''
+
+# requests.getパッチング（ensure_paddleocr_available関数内）
+# verify=False パラメータを自動注入
+```
+
+この対応により、自己署名証明書や企業内部CAを使用する環境でもPaddleOCRが正常に動作します。
+
+**セキュリティ考慮事項**:
+- この設定はローカル開発環境でのみ使用してください
+- プロダクション環境では適切なCA証明書を設定することを推奨します
+
 ### 開発・テスト
 
 - Jest（ユニットテスト）: `tests/unit/*`

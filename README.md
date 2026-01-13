@@ -356,6 +356,56 @@ on:
 - 高解像度でスキャンし直す
 - コントラストを高める
 
+### 5. PaddleOCR SSL証明書検証エラー
+
+**症状**: PaddleOCRエンジン使用時に以下のエラーが表示される
+```
+SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: 
+self signed certificate in certificate chain
+```
+
+**原因**:
+- 企業プロキシ環境やファイアウォール配下で、PaddleOCRのモデルダウンロード時に自己署名証明書が使用されている
+- モデルダウンロード元（paddleocr.bj.bcebos.com）への接続でSSL検証が失敗する
+
+**実装済み対応**:
+backend/main.py（L1-L40）で以下の対応が実装されています：
+
+1. SSL証明書検証を無効化:
+   ```python
+   import ssl
+   ssl._create_default_https_context = ssl._create_unverified_context
+   ```
+
+2. urllib3警告を抑制:
+   ```python
+   import urllib3
+   urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+   ```
+
+3. 環境変数を設定:
+   ```python
+   os.environ['REQUESTS_CA_BUNDLE'] = ''
+   os.environ['CURL_CA_BUNDLE'] = ''
+   ```
+
+4. requests.getをパッチング:
+   - `ensure_paddleocr_available()` 関数でrequests.getに `verify=False` を自動注入
+
+**手動対応**（上記が効かない場合）:
+```bash
+# PowerShellで環境変数を設定
+$env:REQUESTS_CA_BUNDLE = ""
+$env:CURL_CA_BUNDLE = ""
+
+# バックエンド起動
+py -3.10 backend/app.py
+```
+
+**セキュリティ注意事項**:
+- この設定はローカル開発環境でのみ使用してください
+- プロダクション環境では適切なCA証明書を設定することを推奨します
+
 ## パフォーマンス指標
 
 - **1ページPDF処理時間**: 5秒以内（P95、OnnxOCR CPU推論）

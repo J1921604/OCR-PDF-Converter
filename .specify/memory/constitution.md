@@ -32,6 +32,45 @@
 
 この機構により、ドキュメントの種類や品質に応じて最適なOCRエンジンが自動選択され、高精度な検索可能PDF生成を実現します。
 
+### SSL証明書検証エラー対応
+
+企業プロキシ環境やファイアウォール配下で、PaddleOCRがモデルファイルのダウンロード時にSSL証明書検証エラーが発生する場合があります。
+
+**エラーメッセージ例**:
+```
+SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self signed certificate in certificate chain
+```
+
+**実装済み対応**（[backend/main.py L1-L40](https://github.com/J1921604/OCR-PDF-Converter/blob/main/backend/main.py#L1-L40)）:
+
+1. **SSL証明書検証の無効化**
+   ```python
+   import ssl
+   ssl._create_default_https_context = ssl._create_unverified_context
+   ```
+
+2. **urllib3警告の抑制**
+   ```python
+   import urllib3
+   urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+   ```
+
+3. **環境変数の設定**
+   ```python
+   os.environ['REQUESTS_CA_BUNDLE'] = ''
+   os.environ['CURL_CA_BUNDLE'] = ''
+   ```
+
+4. **requests.getパッチング**
+   - `ensure_paddleocr_available()` 関数内でrequests.getに `verify=False` パラメータを自動注入
+
+この対応により、自己署名証明書や企業内部CAを使用する環境でもPaddleOCRが正常に動作します。
+
+**セキュリティ考慮事項**:
+- この設定はローカル開発環境でのみ使用してください
+- プロダクション環境では適切なCA証明書を設定することを推奨します
+- モデルダウンロード元（paddleocr.bj.bcebos.com）が信頼できることを確認してください
+
 ## コア原則
 
 ```mermaid
